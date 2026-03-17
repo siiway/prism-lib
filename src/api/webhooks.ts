@@ -18,10 +18,7 @@ export class WebhooksAPI {
   }
 
   /** Create a new webhook */
-  async create(
-    token: string,
-    params: CreateWebhookParams,
-  ): Promise<Webhook> {
+  async create(token: string, params: CreateWebhookParams): Promise<Webhook> {
     return this.client.request<Webhook>("POST", "/api/oauth/me/webhooks", {
       token,
       body: params,
@@ -43,11 +40,9 @@ export class WebhooksAPI {
 
   /** Delete a webhook */
   async delete(token: string, webhookId: string): Promise<void> {
-    await this.client.request(
-      "DELETE",
-      `/api/oauth/me/webhooks/${webhookId}`,
-      { token },
-    );
+    await this.client.request("DELETE", `/api/oauth/me/webhooks/${webhookId}`, {
+      token,
+    });
   }
 
   /** List webhook deliveries */

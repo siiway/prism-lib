@@ -35,10 +35,7 @@ export class SocialAPI {
   }
 
   /** Add a GPG public key */
-  async addGPGKey(
-    token: string,
-    armoredKey: string,
-  ): Promise<GPGKey> {
+  async addGPGKey(token: string, armoredKey: string): Promise<GPGKey> {
     return this.client.request<GPGKey>("POST", "/api/oauth/me/gpg-keys", {
       token,
       body: { armored_key: armoredKey },
@@ -47,10 +44,8 @@ export class SocialAPI {
 
   /** Remove a GPG key */
   async removeGPGKey(token: string, keyId: string): Promise<void> {
-    await this.client.request(
-      "DELETE",
-      `/api/oauth/me/gpg-keys/${keyId}`,
-      { token },
-    );
+    await this.client.request("DELETE", `/api/oauth/me/gpg-keys/${keyId}`, {
+      token,
+    });
   }
 }

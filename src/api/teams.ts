@@ -1,9 +1,5 @@
 import type { PrismClient } from "../client.js";
-import type {
-  Team,
-  CreateTeamParams,
-  UpdateTeamParams,
-} from "../types.js";
+import type { Team, CreateTeamParams, UpdateTeamParams } from "../types.js";
 
 /** Team management via resource API */
 export class TeamsAPI {
@@ -30,11 +26,10 @@ export class TeamsAPI {
     teamId: string,
     params: UpdateTeamParams,
   ): Promise<Team> {
-    return this.client.request<Team>(
-      "PATCH",
-      `/api/oauth/me/teams/${teamId}`,
-      { token, body: params },
-    );
+    return this.client.request<Team>("PATCH", `/api/oauth/me/teams/${teamId}`, {
+      token,
+      body: params,
+    });
   }
 
   /** Delete a team */
@@ -51,11 +46,10 @@ export class TeamsAPI {
     userId: string,
     role?: "admin" | "member",
   ): Promise<void> {
-    await this.client.request(
-      "POST",
-      `/api/oauth/me/teams/${teamId}/members`,
-      { token, body: { user_id: userId, role: role ?? "member" } },
-    );
+    await this.client.request("POST", `/api/oauth/me/teams/${teamId}/members`, {
+      token,
+      body: { user_id: userId, role: role ?? "member" },
+    });
   }
 
   /** Remove a member from a team */

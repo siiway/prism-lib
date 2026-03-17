@@ -45,7 +45,11 @@ export class AdminAPI {
   async updateUser(
     token: string,
     userId: string,
-    data: Partial<{ display_name: string; role: string; email_verified: boolean }>,
+    data: Partial<{
+      display_name: string;
+      role: string;
+      email_verified: boolean;
+    }>,
   ): Promise<AdminUser> {
     return this.client.request<AdminUser>(
       "PATCH",
@@ -56,11 +60,9 @@ export class AdminAPI {
 
   /** Delete a user */
   async deleteUser(token: string, userId: string): Promise<void> {
-    await this.client.request(
-      "DELETE",
-      `/api/oauth/me/admin/users/${userId}`,
-      { token },
-    );
+    await this.client.request("DELETE", `/api/oauth/me/admin/users/${userId}`, {
+      token,
+    });
   }
 
   // ── Site Config ──
@@ -159,17 +161,25 @@ export class AdminAPI {
     token: string,
     options?: { max_uses?: number; expires_at?: string },
   ) {
-    return this.client.request<{ id: string; token: string; max_uses: number; expires_at?: string }>(
-      "POST",
-      "/api/oauth/me/invites",
-      { token, body: options },
-    );
+    return this.client.request<{
+      id: string;
+      token: string;
+      max_uses: number;
+      expires_at?: string;
+    }>("POST", "/api/oauth/me/invites", { token, body: options });
   }
 
   /** List site invites */
   async listInvites(token: string) {
     return this.client.request<
-      Array<{ id: string; token: string; uses: number; max_uses: number; expires_at?: string; created_at: string }>
+      Array<{
+        id: string;
+        token: string;
+        uses: number;
+        max_uses: number;
+        expires_at?: string;
+        created_at: string;
+      }>
     >("GET", "/api/oauth/me/invites", { token });
   }
 

@@ -31,10 +31,8 @@ export class DomainsAPI {
 
   /** Remove a domain */
   async delete(token: string, domain: string): Promise<void> {
-    await this.client.request(
-      "DELETE",
-      `/api/oauth/me/domains/${domain}`,
-      { token },
-    );
+    await this.client.request("DELETE", `/api/oauth/me/domains/${domain}`, {
+      token,
+    });
   }
 }

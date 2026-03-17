@@ -226,15 +226,17 @@ export class PrismClient {
   /** List apps the user has granted OAuth access to */
   async listConsents(accessToken: string) {
     return this.request<
-      Array<{ client_id: string; app_name: string; scopes: string[]; created_at: string }>
+      Array<{
+        client_id: string;
+        app_name: string;
+        scopes: string[];
+        created_at: string;
+      }>
     >("GET", "/api/oauth/consents", { token: accessToken });
   }
 
   /** Revoke OAuth consent for a specific app */
-  async revokeConsent(
-    accessToken: string,
-    clientId: string,
-  ): Promise<void> {
+  async revokeConsent(accessToken: string, clientId: string): Promise<void> {
     await this.request("DELETE", `/api/oauth/consents/${clientId}`, {
       token: accessToken,
     });
@@ -277,13 +279,20 @@ export class PrismClient {
     const response = await this._fetch(url.toString(), {
       method,
       headers,
-      body: options?.body !== undefined ? JSON.stringify(options.body) : undefined,
+      body:
+        options?.body !== undefined ? JSON.stringify(options.body) : undefined,
     });
 
     if (!response.ok) {
-      let errorBody: { error?: string; message?: string; code?: string } | undefined;
+      let errorBody:
+        | { error?: string; message?: string; code?: string }
+        | undefined;
       try {
-        errorBody = await response.json() as { error?: string; message?: string; code?: string };
+        errorBody = (await response.json()) as {
+          error?: string;
+          message?: string;
+          code?: string;
+        };
       } catch {
         // response body is not JSON
       }
@@ -319,9 +328,15 @@ export class PrismClient {
     });
 
     if (!response.ok) {
-      let errorBody: { error?: string; message?: string; code?: string } | undefined;
+      let errorBody:
+        | { error?: string; message?: string; code?: string }
+        | undefined;
       try {
-        errorBody = await response.json() as { error?: string; message?: string; code?: string };
+        errorBody = (await response.json()) as {
+          error?: string;
+          message?: string;
+          code?: string;
+        };
       } catch {
         // response body is not JSON
       }
