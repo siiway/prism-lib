@@ -1,0 +1,52 @@
+{
+  "name": "@siiway/prism",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for integrating Prism OAuth 2.0 / OpenID Connect identity platform",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun run build:types && bun run build:esm && bun run build:cjs",
+    "build:types": "tsc --emitDeclarationOnly",
+    "build:esm": "bun build src/index.ts --outdir dist --format esm --target browser --sourcemap=external",
+    "build:cjs": "bun build src/index.ts --outdir dist/cjs --format cjs --target node && mv dist/cjs/index.js dist/index.cjs && rm -rf dist/cjs && cp dist/index.d.ts dist/index.d.cts",
+    "typecheck": "tsc --noEmit",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "keywords": [
+    "prism",
+    "oauth",
+    "oidc",
+    "openid-connect",
+    "authentication",
+    "authorization",
+    "pkce",
+    "identity"
+  ],
+  "license": "GPL-3.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vitepress": "^1.6.4"
+  }
+}
