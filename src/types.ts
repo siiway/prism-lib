@@ -141,9 +141,14 @@ export interface Team {
   name: string;
   description?: string;
   avatar_url?: string;
-  owner_id: string;
-  created_at: string;
-  updated_at: string;
+  /** User's role in this team (from list endpoints) */
+  role?: string;
+  /** User's role in this team (from detail endpoint) */
+  my_role?: string;
+  /** When the user joined this team (from OAuth list) */
+  joined_at?: number;
+  created_at: number;
+  updated_at?: number;
 }
 
 export interface TeamMember {
@@ -152,22 +157,79 @@ export interface TeamMember {
   display_name?: string;
   avatar_url?: string;
   role: "owner" | "admin" | "member";
-  joined_at: string;
+  joined_at: number;
 }
 
-export interface TeamWithMembers extends Team {
+export interface TeamDetail extends Team {
+  my_role: string;
+}
+
+export interface TeamWithMembers {
+  team: TeamDetail;
   members: TeamMember[];
 }
 
 export interface CreateTeamParams {
   name: string;
   description?: string;
+  avatar_url?: string;
 }
 
 export interface UpdateTeamParams {
   name?: string;
   description?: string;
   avatar_url?: string;
+}
+
+// ── Team Invites ──
+
+export interface TeamInvite {
+  token: string;
+  team_id: string;
+  role: string;
+  created_by: string;
+  creator_username?: string;
+  email: string | null;
+  max_uses: number;
+  uses: number;
+  expires_at: number;
+  created_at: number;
+}
+
+export interface CreateTeamInviteParams {
+  role?: "admin" | "member";
+  max_uses?: number;
+  expires_in_hours?: number;
+  email?: string;
+}
+
+export interface TeamInviteInfo {
+  team: { id: string; name: string; avatar_url: string | null };
+  invite: { role: string; expires_at: number };
+  user: unknown;
+}
+
+// ── Team Domains ──
+
+export interface TeamDomain {
+  id: string;
+  domain: string;
+  verified: boolean;
+  verification_token: string;
+  txt_record?: string;
+  txt_value?: string;
+  verified_by_parent?: string;
+  created_at: number;
+}
+
+// ── Team Apps ──
+
+export interface TeamApp extends OAuthApp {
+  team_id: string;
+  is_active: boolean;
+  is_verified: boolean;
+  is_official: boolean;
+  is_first_party: boolean;
 }
 
 // ── Domains ──
