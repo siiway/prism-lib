@@ -80,6 +80,8 @@ export interface User {
   email: string;
   display_name?: string;
   avatar_url?: string;
+  /** Original avatar URL before reverse-proxy rewriting */
+  unproxied_avatar_url?: string;
   role: string;
   email_verified: boolean;
   created_at: string;
@@ -92,6 +94,7 @@ export interface UserInfo {
   preferred_username?: string;
   email?: string;
   email_verified?: boolean;
+  /** Proxied picture URL */
   picture?: string;
   updated_at?: number;
 }
@@ -141,6 +144,8 @@ export interface Team {
   name: string;
   description?: string;
   avatar_url?: string;
+  /** Original avatar URL before reverse-proxy rewriting */
+  unproxied_avatar_url?: string;
   /** User's role in this team (from list endpoints) */
   role?: string;
   /** User's role in this team (from detail endpoint) */
@@ -156,6 +161,8 @@ export interface TeamMember {
   username: string;
   display_name?: string;
   avatar_url?: string;
+  /** Original avatar URL before reverse-proxy rewriting */
+  unproxied_avatar_url?: string;
   role: "owner" | "admin" | "member";
   joined_at: number;
 }
@@ -204,7 +211,12 @@ export interface CreateTeamInviteParams {
 }
 
 export interface TeamInviteInfo {
-  team: { id: string; name: string; avatar_url: string | null };
+  team: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+    unproxied_avatar_url?: string | null;
+  };
   invite: { role: string; expires_at: number };
   user: unknown;
 }
