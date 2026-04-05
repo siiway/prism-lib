@@ -74,7 +74,7 @@ export class TeamsAPI {
     token: string,
     teamId: string,
     username: string,
-    role?: "admin" | "member",
+    role?: "co-owner" | "admin" | "member",
   ): Promise<{ user_id: string; role: string; joined_at: number }> {
     return this.client.request(
       "POST",
@@ -163,7 +163,7 @@ export class TeamsAPI {
     token: string,
     teamId: string,
     username: string,
-    role?: "admin" | "member",
+    role?: "co-owner" | "admin" | "member",
   ): Promise<void> {
     await this.client.request("POST", `/api/teams/${teamId}/members`, {
       token,
@@ -171,12 +171,12 @@ export class TeamsAPI {
     });
   }
 
-  /** Change a member's role (owner only) */
+  /** Change a member's role (owner/co-owner) */
   async updateMemberRole(
     token: string,
     teamId: string,
     userId: string,
-    role: "admin" | "member",
+    role: "co-owner" | "admin" | "member",
   ): Promise<void> {
     await this.client.request(
       "PATCH",

@@ -163,7 +163,7 @@ export interface TeamMember {
   avatar_url?: string;
   /** Original avatar URL before reverse-proxy rewriting */
   unproxied_avatar_url?: string;
-  role: "owner" | "admin" | "member";
+  role: "owner" | "co-owner" | "admin" | "member";
   joined_at: number;
 }
 
@@ -204,7 +204,7 @@ export interface TeamInvite {
 }
 
 export interface CreateTeamInviteParams {
-  role?: "admin" | "member";
+  role?: "co-owner" | "admin" | "member";
   max_uses?: number;
   expires_in_hours?: number;
   email?: string;
