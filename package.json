@@ -1,6 +1,6 @@
 {
   "name": "@siiway/prism",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "TypeScript SDK for integrating Prism OAuth 2.0 / OpenID Connect identity platform",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -48,5 +48,8 @@
   "devDependencies": {
     "typescript": "~5.9.3",
     "vitepress": "^1.6.4"
+  },
+  "dependencies": {
+    "@noble/post-quantum": "^0.6.1"
   }
 }

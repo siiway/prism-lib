@@ -291,6 +291,142 @@ export interface UpdateWebhookParams {
   secret?: string;
 }
 
+// ── App notification channels ──
+
+/** Event types emitted by Prism to OAuth app notification endpoints. */
+export type AppEventType =
+  | "user.token_granted"
+  | "user.token_revoked"
+  | "user.updated"
+  | "*";
+
+/** A webhook registered on an OAuth app (app-to-app notifications). */
+export interface AppWebhook {
+  id: string;
+  app_id: string;
+  url: string;
+  /** Only returned on creation. */
+  secret?: string;
+  events: AppEventType[];
+  is_active: boolean;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface AppWebhookDelivery {
+  id: string;
+  webhook_id: string;
+  event_type: string;
+  response_status: number | null;
+  success: boolean;
+  delivered_at: number;
+}
+
+export interface CreateAppWebhookParams {
+  url: string;
+  events?: AppEventType[];
+  /** Auto-generated if omitted. */
+  secret?: string;
+}
+
+export interface UpdateAppWebhookParams {
+  url?: string;
+  events?: AppEventType[];
+  secret?: string;
+  is_active?: boolean;
+}
+
+/**
+ * A single event message received over SSE or WebSocket.
+ * The `data` field matches the payload of the corresponding Prism event.
+ */
+export interface AppEvent<T = unknown> {
+  event: AppEventType;
+  timestamp: number;
+  data: T;
+}
+
+/** Data payload for `user.token_granted`. */
+export interface TokenGrantedData {
+  user_id: string;
+  scopes: string[];
+  granted_at: number;
+}
+
+/** Data payload for `user.token_revoked`. */
+export interface TokenRevokedData {
+  user_id: string;
+}
+
+/** Data payload for `user.updated`. */
+export interface UserUpdatedData {
+  user_id: string;
+  username?: string;
+  display_name?: string;
+}
+
+// ── App Scope Definitions ──
+
+/**
+ * Metadata for a custom permission scope exposed by an OAuth app.
+ * Title and description appear on the consent screen.
+ */
+export interface AppScopeDefinition {
+  id: string;
+  app_id: string;
+  /** Inner scope identifier, e.g. `"read_posts"` */
+  scope: string;
+  title: string;
+  description: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface CreateAppScopeDefinitionParams {
+  scope: string;
+  title: string;
+  description?: string;
+}
+
+export interface UpdateAppScopeDefinitionParams {
+  title?: string;
+  description?: string;
+}
+
+// ── App Scope Access Rules ──
+
+export type AppScopeAccessRuleType =
+  | "owner_allow"
+  | "owner_deny"
+  | "app_allow"
+  | "app_deny";
+
+/**
+ * An access-control rule governing who may register or request
+ * this app's cross-app permission scopes.
+ *
+ * - `owner_allow` / `owner_deny` — controls which user **owners** may add
+ *   `app:<client_id>:<scope>` to their app's `allowed_scopes`.
+ * - `app_allow` / `app_deny` — controls which **client apps** may request
+ *   those scopes during the OAuth authorization flow.
+ *
+ * If any `*_allow` rule exists the list becomes an allowlist;
+ * `*_deny` rules are always enforced regardless.
+ */
+export interface AppScopeAccessRule {
+  id: string;
+  app_id: string;
+  rule_type: AppScopeAccessRuleType;
+  /** `client_id` for `app_*` rules; `user_id` for `owner_*` rules */
+  target_id: string;
+  created_at: number;
+}
+
+export interface CreateAppScopeAccessRuleParams {
+  rule_type: AppScopeAccessRuleType;
+  target_id: string;
+}
+
 // ── Social Connections ──
 
 export interface SocialConnection {

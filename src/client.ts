@@ -11,6 +11,9 @@ import { DomainsAPI } from "./api/domains.js";
 import { WebhooksAPI } from "./api/webhooks.js";
 import { AdminAPI } from "./api/admin.js";
 import { SocialAPI } from "./api/social.js";
+import { AppNotificationsAPI } from "./api/app-notifications.js";
+import { AppScopePermissionsAPI } from "./api/app-scope-permissions.js";
+import { PrismError } from "./types.js";
 import type {
   PrismClientOptions,
   AuthorizationUrlOptions,
@@ -37,6 +40,8 @@ export class PrismClient {
   readonly webhooks: WebhooksAPI;
   readonly admin: AdminAPI;
   readonly social: SocialAPI;
+  readonly appNotifications: AppNotificationsAPI;
+  readonly appScopePermissions: AppScopePermissionsAPI;
 
   constructor(options: PrismClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
@@ -53,6 +58,8 @@ export class PrismClient {
     this.webhooks = new WebhooksAPI(this);
     this.admin = new AdminAPI(this);
     this.social = new SocialAPI(this);
+    this.appNotifications = new AppNotificationsAPI(this);
+    this.appScopePermissions = new AppScopePermissionsAPI(this);
   }
 
   // ── OIDC Discovery ──
@@ -141,7 +148,7 @@ export class PrismClient {
    */
   async exchangeCode(
     code: string,
-    codeVerifier: string,
+    codeVerifier?: string,
     redirectUri?: string,
   ): Promise<TokenResponse> {
     const body = new URLSearchParams({
@@ -149,8 +156,10 @@ export class PrismClient {
       code,
       redirect_uri: redirectUri ?? this.redirectUri,
       client_id: this.clientId,
-      code_verifier: codeVerifier,
     });
+    if (codeVerifier) {
+      body.set("code_verifier", codeVerifier);
+    }
 
     if (this.clientSecret) {
       body.set("client_secret", this.clientSecret);
@@ -285,7 +294,12 @@ export class PrismClient {
 
     if (!response.ok) {
       let errorBody:
-        | { error?: string; message?: string; code?: string }
+        | {
+            error?: string;
+            error_description?: string;
+            message?: string;
+            code?: string;
+          }
         | undefined;
       try {
         errorBody = (await response.json()) as {
@@ -297,9 +311,11 @@ export class PrismClient {
         // response body is not JSON
       }
 
-      const { PrismError: PrismErrorClass } = await import("./types.js");
-      throw new PrismErrorClass(
-        errorBody?.message ?? errorBody?.error ?? response.statusText,
+      throw new PrismError(
+        errorBody?.error_description ??
+          errorBody?.message ??
+          errorBody?.error ??
+          response.statusText,
         response.status,
         errorBody?.code,
         errorBody,
@@ -329,7 +345,12 @@ export class PrismClient {
 
     if (!response.ok) {
       let errorBody:
-        | { error?: string; message?: string; code?: string }
+        | {
+            error?: string;
+            error_description?: string;
+            message?: string;
+            code?: string;
+          }
         | undefined;
       try {
         errorBody = (await response.json()) as {
@@ -341,9 +362,11 @@ export class PrismClient {
         // response body is not JSON
       }
 
-      const { PrismError: PrismErrorClass } = await import("./types.js");
-      throw new PrismErrorClass(
-        errorBody?.message ?? errorBody?.error ?? response.statusText,
+      throw new PrismError(
+        errorBody?.error_description ??
+          errorBody?.message ??
+          errorBody?.error ??
+          response.statusText,
         response.status,
         errorBody?.code,
         errorBody,
