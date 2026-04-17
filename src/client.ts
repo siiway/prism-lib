@@ -13,6 +13,7 @@ import { AdminAPI } from "./api/admin.js";
 import { SocialAPI } from "./api/social.js";
 import { AppNotificationsAPI } from "./api/app-notifications.js";
 import { AppScopePermissionsAPI } from "./api/app-scope-permissions.js";
+import { SiteAPI } from "./api/site.js";
 import { PrismError } from "./types.js";
 import type {
   PrismClientOptions,
@@ -42,6 +43,7 @@ export class PrismClient {
   readonly social: SocialAPI;
   readonly appNotifications: AppNotificationsAPI;
   readonly appScopePermissions: AppScopePermissionsAPI;
+  readonly site: SiteAPI;
 
   constructor(options: PrismClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
@@ -60,6 +62,7 @@ export class PrismClient {
     this.social = new SocialAPI(this);
     this.appNotifications = new AppNotificationsAPI(this);
     this.appScopePermissions = new AppScopePermissionsAPI(this);
+    this.site = new SiteAPI(this);
   }
 
   // ── OIDC Discovery ──

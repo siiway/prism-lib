@@ -111,3 +111,22 @@ await prism.admin.updateUser(accessToken, userId, { role: "admin" });
 const config = await prism.admin.getConfig(accessToken);
 await prism.admin.updateConfig(accessToken, { site_name: "My Prism" });
 ```
+
+## Site
+
+Site-level scopes grant unrestricted cross-user access and can only be authorized by site admins via a special OAuth consent flow (requires 2FA + confirmation phrase). The resulting token must belong to a site admin.
+
+Scope: `site:user:read`
+
+```ts
+// List all users on the site
+const { users, total } = await prism.site.listUsers(accessToken, {
+  page: 1,
+  per_page: 50,
+  search: "alice",
+});
+
+// Look up any user by ID — no team membership required
+const user = await prism.site.getUser(accessToken, userId);
+console.log(user.display_name, user.avatar_url);
+```

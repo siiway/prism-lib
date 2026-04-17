@@ -111,3 +111,22 @@ await prism.admin.updateUser(accessToken, userId, { role: "admin" });
 const config = await prism.admin.getConfig(accessToken);
 await prism.admin.updateConfig(accessToken, { site_name: "My Prism" });
 ```
+
+## 站点
+
+站点级权限范围授予对整个站点无限制的跨用户访问能力，只能由站点管理员通过特殊 OAuth 授权流程（需要双因素验证和确认短语）授予。生成的令牌也必须属于站点管理员。
+
+范围：`site:user:read`
+
+```ts
+// 列出站点内所有用户
+const { users, total } = await prism.site.listUsers(accessToken, {
+  page: 1,
+  per_page: 50,
+  search: "alice",
+});
+
+// 按 ID 查找任意用户，无需团队成员关系
+const user = await prism.site.getUser(accessToken, userId);
+console.log(user.display_name, user.avatar_url);
+```

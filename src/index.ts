@@ -76,3 +76,4 @@ export { AdminAPI } from "./api/admin.js";
 export { SocialAPI } from "./api/social.js";
 export { AppNotificationsAPI } from "./api/app-notifications.js";
 export { AppScopePermissionsAPI } from "./api/app-scope-permissions.js";
+export { SiteAPI } from "./api/site.js";

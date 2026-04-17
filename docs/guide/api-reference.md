@@ -107,6 +107,15 @@ new PrismClient(options: PrismClientOptions)
 | `deleteWebhook(token, id)` | `admin:webhooks:delete` | Delete admin webhook |
 | `testWebhook(token, id)` | `admin:webhooks:write` | Send test delivery |
 | `listWebhookDeliveries(token, id)` | `admin:webhooks:read` | Delivery history |
+
+#### `prism.site`
+
+Site-level scopes are granted through a special OAuth consent flow that requires the authorizing user to be a site admin and provide 2FA + confirmation. The token owner must also be a site admin.
+
+| Method | Scope | Description |
+| --- | --- | --- |
+| `listUsers(token, options?)` | `site:user:read` | List all users on the site (paginated) |
+| `getUser(token, id)` | `site:user:read` | Get any user by ID |
 | `createInvite(token, options?)` | `admin:invites:create` | Create site invite |
 | `listInvites(token)` | `admin:invites:read` | List invites |
 | `deleteInvite(token, id)` | `admin:invites:delete` | Revoke invite |
@@ -143,5 +152,8 @@ admin:users:read, admin:users:write, admin:users:delete,
 admin:config:read, admin:config:write,
 admin:invites:read, admin:invites:create, admin:invites:delete,
 admin:webhooks:read, admin:webhooks:write, admin:webhooks:delete,
+site:user:read, site:user:write, site:user:delete,
+site:team:read, site:team:write, site:team:delete,
+site:config:read, site:config:write, site:token:revoke,
 offline_access
 ```

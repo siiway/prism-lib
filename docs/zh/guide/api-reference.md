@@ -111,6 +111,15 @@ new PrismClient(options: PrismClientOptions)
 | `listInvites(token)` | `admin:invites:read` | 列出邀请 |
 | `deleteInvite(token, id)` | `admin:invites:delete` | 撤销邀请 |
 
+#### `prism.site`
+
+站点级权限范围通过特殊 OAuth 授权流程授予，要求授权用户为站点管理员并完成双因素验证和确认短语输入。令牌持有者也必须是站点管理员。
+
+| 方法 | 范围 | 说明 |
+| --- | --- | --- |
+| `listUsers(token, options?)` | `site:user:read` | 列出站点内所有用户（分页） |
+| `getUser(token, id)` | `site:user:read` | 按 ID 获取任意用户 |
+
 ### 静态工具函数
 
 ```ts
@@ -143,5 +152,8 @@ admin:users:read, admin:users:write, admin:users:delete,
 admin:config:read, admin:config:write,
 admin:invites:read, admin:invites:create, admin:invites:delete,
 admin:webhooks:read, admin:webhooks:write, admin:webhooks:delete,
+site:user:read, site:user:write, site:user:delete,
+site:team:read, site:team:write, site:team:delete,
+site:config:read, site:config:write, site:token:revoke,
 offline_access
 ```
