@@ -23,6 +23,16 @@ new PrismClient(options: PrismClientOptions)
 | --- | --- | --- |
 | `createAuthorizationUrl(options?)` | `Promise<{ url, pkce }>` | 生成带 PKCE 的授权 URL |
 | `buildAuthorizationUrl(verifier, options?)` | `Promise<string>` | 使用已有 verifier 的授权 URL |
+
+两个方法均接受 `AuthorizationUrlOptions`：
+
+| 选项 | 类型 | 说明 |
+| --- | --- | --- |
+| `scopes` | `string[]` | 覆盖默认范围 |
+| `optionalScopes` | `string[]` | 用户可拒绝的范围（`scopes` 的子集），作为 `optional_scope` 查询参数传递 |
+| `redirectUri` | `string` | 覆盖默认回调地址 |
+| `state` | `string` | 自定义 state（省略则自动生成） |
+| `nonce` | `string` | OIDC ID 令牌验证用 nonce |
 | `exchangeCode(code, verifier, redirectUri?)` | `Promise<TokenResponse>` | 用授权码换取令牌 |
 | `refreshToken(refreshToken)` | `Promise<TokenResponse>` | 刷新访问令牌 |
 | `introspectToken(token, hint?)` | `Promise<TokenIntrospectionResponse>` | 检查令牌状态 |
@@ -50,6 +60,8 @@ new PrismClient(options: PrismClientOptions)
 | `create(token, params)` | `apps:write` | 创建新应用 |
 | `update(token, id, params)` | `apps:write` | 更新应用 |
 | `delete(token, id)` | `apps:write` | 删除应用 |
+
+`CreateAppParams` / `UpdateAppParams` 支持 `optional_scopes?: string[]` 字段，必须是 `allowed_scopes` 的子集。列在此处的范围在授权页面以可选复选框形式展示，用户可拒绝而不影响授权流程。
 
 #### `prism.teams`
 
@@ -113,12 +125,26 @@ new PrismClient(options: PrismClientOptions)
 
 #### `prism.site`
 
-站点级权限范围通过特殊 OAuth 授权流程授予，要求授权用户为站点管理员并完成双因素验证和确认短语输入。令牌持有者也必须是站点管理员。
+站点级权限范围在授权用户非站点管理员或未启用任何 2FA 时，会被静默从令牌中移除——OAuth 流程仍会正常完成，只是不含这些范围。当用户是已启用 2FA 的站点管理员时，授权页面将站点范围显示为可选复选框，并要求完成双因素验证和确认短语。
 
 | 方法 | 范围 | 说明 |
 | --- | --- | --- |
 | `listUsers(token, options?)` | `site:user:read` | 列出站点内所有用户（分页） |
 | `getUser(token, id)` | `site:user:read` | 按 ID 获取任意用户 |
+
+#### `prism.teamScope`
+
+团队范围令牌在应用请求 `team:read`、`team:write`、`team:member:read` 等范围时颁发，用户在授权页面选择特定团队后，令牌携带绑定范围如 `team:<teamId>:member:read`。
+
+| 方法 | 范围 | 说明 |
+| --- | --- | --- |
+| `getInfo(token, teamId)` | `team:<id>:read` | 读取团队名称、描述、头像 |
+| `updateInfo(token, teamId, data)` | `team:<id>:write` | 更新团队名称/描述/头像 |
+| `listMembers(token, teamId)` | `team:<id>:member:read` | 列出成员 ID 和角色 |
+| `getMemberProfile(token, teamId, userId)` | `team:<id>:member:profile:read` | 获取成员显示名称和头像 |
+| `addMember(token, teamId, userId, role?)` | `team:<id>:member:write` | 添加成员 |
+| `updateMemberRole(token, teamId, userId, role)` | `team:<id>:member:write` | 修改成员角色 |
+| `removeMember(token, teamId, userId)` | `team:<id>:member:write` | 移除成员 |
 
 ### 静态工具函数
 
@@ -155,5 +181,7 @@ admin:webhooks:read, admin:webhooks:write, admin:webhooks:delete,
 site:user:read, site:user:write, site:user:delete,
 site:team:read, site:team:write, site:team:delete,
 site:config:read, site:config:write, site:token:revoke,
+team:read, team:write, team:delete,
+team:member:read, team:member:write, team:member:profile:read,
 offline_access
 ```

@@ -54,6 +54,9 @@ export type {
   CreateAppScopeDefinitionParams,
   UpdateAppScopeDefinitionParams,
   CreateAppScopeAccessRuleParams,
+  TeamScopeTeam,
+  TeamScopeMember,
+  TeamScopeMemberProfile,
 } from "./types.js";
 
 export { PrismError } from "./types.js";
@@ -77,3 +80,4 @@ export { SocialAPI } from "./api/social.js";
 export { AppNotificationsAPI } from "./api/app-notifications.js";
 export { AppScopePermissionsAPI } from "./api/app-scope-permissions.js";
 export { SiteAPI } from "./api/site.js";
+export { TeamScopeAPI } from "./api/team-scope.js";

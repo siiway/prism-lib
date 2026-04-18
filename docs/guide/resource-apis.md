@@ -2,6 +2,32 @@
 
 All resource APIs require a valid access token with the appropriate scopes.
 
+## Optional Scopes
+
+Apps can mark certain scopes as optional at authorization time. The user sees them as toggleable checkboxes on the consent screen and may decline them — the token is still issued, just without those scopes.
+
+Optional scopes can be declared two ways:
+
+**Per-request** (recommended): pass `optionalScopes` when building the authorization URL.
+
+```ts
+const { url, pkce } = await prism.createAuthorizationUrl({
+  scopes: ["openid", "profile", "team:read"],
+  optionalScopes: ["team:read"],   // user can decline this
+});
+```
+
+**Per-app default**: set `optional_scopes` on the app itself (via `prism.apps.update`). These apply to every authorization request from that app unless overridden per-request.
+
+```ts
+await prism.apps.update(accessToken, appId, {
+  allowed_scopes: ["openid", "profile", "team:read"],
+  optional_scopes: ["team:read"],
+});
+```
+
+Per-request and per-app optional scopes are merged — a scope is optional if it appears in either list.
+
 ## Profile
 
 Scope: `profile`, `profile:write`
@@ -27,7 +53,10 @@ const apps = await prism.apps.list(accessToken);
 const app = await prism.apps.create(accessToken, {
   name: "My App",
   redirect_uris: ["http://localhost:3000/callback"],
-  allowed_scopes: ["openid", "profile", "email"],
+  allowed_scopes: ["openid", "profile", "email", "profile:write"],
+  // Optional scopes are shown with a toggle on the consent screen.
+  // Users can decline them; the token is still issued without those scopes.
+  optional_scopes: ["profile:write"],
 });
 
 await prism.apps.update(accessToken, app.id, { name: "Renamed" });
@@ -114,7 +143,7 @@ await prism.admin.updateConfig(accessToken, { site_name: "My Prism" });
 
 ## Site
 
-Site-level scopes grant unrestricted cross-user access and can only be authorized by site admins via a special OAuth consent flow (requires 2FA + confirmation phrase). The resulting token must belong to a site admin.
+Site-level scopes grant unrestricted cross-user access. They are silently dropped from the token for users who are not site admins or who have no 2FA method enrolled — the consent flow completes normally, just without those scopes. When the authorizing user is a site admin with 2FA enrolled, the consent screen shows the site scopes as optional checkboxes alongside a 2FA challenge and a confirmation phrase.
 
 Scope: `site:user:read`
 
@@ -129,4 +158,33 @@ const { users, total } = await prism.site.listUsers(accessToken, {
 // Look up any user by ID — no team membership required
 const user = await prism.site.getUser(accessToken, userId);
 console.log(user.display_name, user.avatar_url);
+```
+
+## Team-Scoped Access
+
+Apps request unbound team scopes (`team:read`, `team:member:read`, etc.) in their scope list. On the consent screen, the user selects which team to bind the token to. The issued token carries bound scopes like `team:<teamId>:member:read`.
+
+A team owner or admin can grant all permissions except `team:delete`, which requires the owner role.
+
+```ts
+// Request in OAuth flow:
+// scope = "openid profile team:read team:member:read team:member:profile:read"
+//
+// After the user picks a team, the token has:
+// team:<selectedTeamId>:read  team:<selectedTeamId>:member:read  ...
+
+// Read the team the token was granted for
+const team = await prism.teamScope.getInfo(accessToken, teamId);
+
+// List members (IDs + roles only)
+const members = await prism.teamScope.listMembers(accessToken, teamId);
+
+// Resolve a member's display name and avatar
+const profile = await prism.teamScope.getMemberProfile(accessToken, teamId, userId);
+console.log(profile.display_name, profile.avatar_url);
+
+// Manage membership
+await prism.teamScope.addMember(accessToken, teamId, newUserId, "member");
+await prism.teamScope.updateMemberRole(accessToken, teamId, userId, "admin");
+await prism.teamScope.removeMember(accessToken, teamId, userId);
 ```

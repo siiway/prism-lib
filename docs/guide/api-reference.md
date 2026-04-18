@@ -23,6 +23,16 @@ new PrismClient(options: PrismClientOptions)
 | --- | --- | --- |
 | `createAuthorizationUrl(options?)` | `Promise<{ url, pkce }>` | Generate auth URL with PKCE |
 | `buildAuthorizationUrl(verifier, options?)` | `Promise<string>` | Auth URL with existing verifier |
+
+Both methods accept `AuthorizationUrlOptions`:
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `scopes` | `string[]` | Override default scopes |
+| `optionalScopes` | `string[]` | Scopes the user may decline (subset of `scopes`). Emitted as `optional_scope` query param. |
+| `redirectUri` | `string` | Override default redirect URI |
+| `state` | `string` | Custom state (auto-generated if omitted) |
+| `nonce` | `string` | Nonce for OIDC ID token validation |
 | `exchangeCode(code, verifier, redirectUri?)` | `Promise<TokenResponse>` | Exchange code for tokens |
 | `refreshToken(refreshToken)` | `Promise<TokenResponse>` | Refresh access token |
 | `introspectToken(token, hint?)` | `Promise<TokenIntrospectionResponse>` | Check token status |
@@ -50,6 +60,8 @@ new PrismClient(options: PrismClientOptions)
 | `create(token, params)` | `apps:write` | Create new app |
 | `update(token, id, params)` | `apps:write` | Update app |
 | `delete(token, id)` | `apps:write` | Delete app |
+
+`CreateAppParams` / `UpdateAppParams` accept an `optional_scopes?: string[]` field — a subset of `allowed_scopes`. Scopes listed here appear as optional checkboxes on the consent screen; users can decline them without blocking the authorization.
 
 #### `prism.teams`
 
@@ -107,18 +119,32 @@ new PrismClient(options: PrismClientOptions)
 | `deleteWebhook(token, id)` | `admin:webhooks:delete` | Delete admin webhook |
 | `testWebhook(token, id)` | `admin:webhooks:write` | Send test delivery |
 | `listWebhookDeliveries(token, id)` | `admin:webhooks:read` | Delivery history |
+| `createInvite(token, options?)` | `admin:invites:create` | Create site invite |
+| `listInvites(token)` | `admin:invites:read` | List invites |
+| `deleteInvite(token, id)` | `admin:invites:delete` | Revoke invite |
 
 #### `prism.site`
 
-Site-level scopes are granted through a special OAuth consent flow that requires the authorizing user to be a site admin and provide 2FA + confirmation. The token owner must also be a site admin.
+Site-level scopes are silently omitted from the token when the authorizing user is not a site admin or has no 2FA method enrolled — the OAuth flow still completes with the remaining scopes. When the user is an admin with 2FA enrolled, the consent screen shows site scopes as optional checkboxes alongside a 2FA challenge and confirmation phrase.
 
 | Method | Scope | Description |
 | --- | --- | --- |
 | `listUsers(token, options?)` | `site:user:read` | List all users on the site (paginated) |
 | `getUser(token, id)` | `site:user:read` | Get any user by ID |
-| `createInvite(token, options?)` | `admin:invites:create` | Create site invite |
-| `listInvites(token)` | `admin:invites:read` | List invites |
-| `deleteInvite(token, id)` | `admin:invites:delete` | Revoke invite |
+
+#### `prism.teamScope`
+
+Team-scoped tokens are issued when an app requests `team:read`, `team:write`, `team:member:read`, `team:member:write`, `team:member:profile:read`, or `team:delete` and the user selects a specific team on the consent screen. The token carries bound scopes like `team:<teamId>:member:read`.
+
+| Method | Scope | Description |
+| --- | --- | --- |
+| `getInfo(token, teamId)` | `team:<id>:read` | Read team name, description, avatar |
+| `updateInfo(token, teamId, data)` | `team:<id>:write` | Update team name/description/avatar |
+| `listMembers(token, teamId)` | `team:<id>:member:read` | List member IDs and roles |
+| `getMemberProfile(token, teamId, userId)` | `team:<id>:member:profile:read` | Get member display name and avatar |
+| `addMember(token, teamId, userId, role?)` | `team:<id>:member:write` | Add a user to the team |
+| `updateMemberRole(token, teamId, userId, role)` | `team:<id>:member:write` | Change a member's role |
+| `removeMember(token, teamId, userId)` | `team:<id>:member:write` | Remove a member |
 
 ### Static Helpers
 
@@ -155,5 +181,7 @@ admin:webhooks:read, admin:webhooks:write, admin:webhooks:delete,
 site:user:read, site:user:write, site:user:delete,
 site:team:read, site:team:write, site:team:delete,
 site:config:read, site:config:write, site:token:revoke,
+team:read, team:write, team:delete,
+team:member:read, team:member:write, team:member:profile:read,
 offline_access
 ```

@@ -20,6 +20,12 @@ export interface PrismClientOptions {
 export interface AuthorizationUrlOptions {
   /** Override default scopes */
   scopes?: string[];
+  /**
+   * Scopes from the request that the user may decline on the consent screen.
+   * Must be a subset of `scopes`. Declined scopes are omitted from the token
+   * but the authorization still succeeds.
+   */
+  optionalScopes?: string[];
   /** Override default redirect URI */
   redirectUri?: string;
   /** Custom state parameter (auto-generated if omitted) */
@@ -110,6 +116,7 @@ export interface OAuthApp {
   website_url?: string;
   redirect_uris: string[];
   allowed_scopes: string[];
+  optional_scopes: string[];
   oidc_fields?: string[];
   is_public: boolean;
   owner_id: string;
@@ -123,6 +130,7 @@ export interface CreateAppParams {
   website_url?: string;
   redirect_uris: string[];
   allowed_scopes: string[];
+  optional_scopes?: string[];
   oidc_fields?: string[];
   is_public?: boolean;
 }
@@ -133,6 +141,7 @@ export interface UpdateAppParams {
   website_url?: string;
   redirect_uris?: string[];
   allowed_scopes?: string[];
+  optional_scopes?: string[];
   oidc_fields?: string[];
   is_public?: boolean;
 }
@@ -478,6 +487,28 @@ export interface PaginatedResponse<T> {
   total: number;
   page: number;
   per_page: number;
+}
+
+export interface TeamScopeTeam {
+  id: string;
+  name: string;
+  description?: string;
+  avatar_url?: string;
+  unproxied_avatar_url?: string;
+  created_at: number;
+}
+
+export interface TeamScopeMember {
+  user_id: string;
+  role: string;
+  joined_at: number;
+}
+
+export interface TeamScopeMemberProfile extends TeamScopeMember {
+  username: string;
+  display_name?: string;
+  avatar_url?: string;
+  unproxied_avatar_url?: string;
 }
 
 export interface SiteConfig {

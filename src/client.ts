@@ -14,6 +14,7 @@ import { SocialAPI } from "./api/social.js";
 import { AppNotificationsAPI } from "./api/app-notifications.js";
 import { AppScopePermissionsAPI } from "./api/app-scope-permissions.js";
 import { SiteAPI } from "./api/site.js";
+import { TeamScopeAPI } from "./api/team-scope.js";
 import { PrismError } from "./types.js";
 import type {
   PrismClientOptions,
@@ -44,6 +45,7 @@ export class PrismClient {
   readonly appNotifications: AppNotificationsAPI;
   readonly appScopePermissions: AppScopePermissionsAPI;
   readonly site: SiteAPI;
+  readonly teamScope: TeamScopeAPI;
 
   constructor(options: PrismClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
@@ -63,6 +65,7 @@ export class PrismClient {
     this.appNotifications = new AppNotificationsAPI(this);
     this.appScopePermissions = new AppScopePermissionsAPI(this);
     this.site = new SiteAPI(this);
+    this.teamScope = new TeamScopeAPI(this);
   }
 
   // ── OIDC Discovery ──
@@ -103,8 +106,9 @@ export class PrismClient {
       code_challenge_method: "S256",
     });
 
-    if (options?.nonce) {
-      params.set("nonce", options.nonce);
+    if (options?.nonce) params.set("nonce", options.nonce);
+    if (options?.optionalScopes?.length) {
+      params.set("optional_scope", options.optionalScopes.join(" "));
     }
 
     const url = `${this.baseUrl}/api/oauth/authorize?${params.toString()}`;
@@ -134,8 +138,9 @@ export class PrismClient {
       code_challenge_method: "S256",
     });
 
-    if (options?.nonce) {
-      params.set("nonce", options.nonce);
+    if (options?.nonce) params.set("nonce", options.nonce);
+    if (options?.optionalScopes?.length) {
+      params.set("optional_scope", options.optionalScopes.join(" "));
     }
 
     return `${this.baseUrl}/api/oauth/authorize?${params.toString()}`;

@@ -2,6 +2,32 @@
 
 所有资源 API 都需要有效的访问令牌和相应的权限范围。
 
+## 可选权限范围
+
+应用可以在授权时将某些范围标记为可选。用户在授权页面可通过复选框选择是否授予这些范围——即使拒绝，令牌仍会正常颁发，只是不含被拒绝的范围。
+
+可选范围有两种声明方式：
+
+**按请求声明**（推荐）：构建授权 URL 时传入 `optionalScopes`。
+
+```ts
+const { url, pkce } = await prism.createAuthorizationUrl({
+  scopes: ["openid", "profile", "team:read"],
+  optionalScopes: ["team:read"],   // 用户可拒绝此范围
+});
+```
+
+**按应用默认**：在应用配置中设置 `optional_scopes`（通过 `prism.apps.update`），对该应用的所有授权请求生效。
+
+```ts
+await prism.apps.update(accessToken, appId, {
+  allowed_scopes: ["openid", "profile", "team:read"],
+  optional_scopes: ["team:read"],
+});
+```
+
+按请求和按应用声明的可选范围会合并——只要出现在任意一处即为可选。
+
 ## 用户资料
 
 范围：`profile`、`profile:write`
@@ -27,7 +53,10 @@ const apps = await prism.apps.list(accessToken);
 const app = await prism.apps.create(accessToken, {
   name: "我的应用",
   redirect_uris: ["http://localhost:3000/callback"],
-  allowed_scopes: ["openid", "profile", "email"],
+  allowed_scopes: ["openid", "profile", "email", "profile:write"],
+  // 可选范围会在授权页面以复选框形式展示。
+  // 用户可以拒绝，令牌仍会颁发，只是不含这些范围。
+  optional_scopes: ["profile:write"],
 });
 
 await prism.apps.update(accessToken, app.id, { name: "重命名" });
@@ -114,7 +143,7 @@ await prism.admin.updateConfig(accessToken, { site_name: "My Prism" });
 
 ## 站点
 
-站点级权限范围授予对整个站点无限制的跨用户访问能力，只能由站点管理员通过特殊 OAuth 授权流程（需要双因素验证和确认短语）授予。生成的令牌也必须属于站点管理员。
+站点级权限范围授予对整个站点无限制的跨用户访问能力。当授权用户不是站点管理员，或未启用任何双因素认证时，这些范围会被静默从令牌中移除——OAuth 流程仍会正常完成，只是不含这些范围。当用户是已启用 2FA 的站点管理员时，授权页面会将站点范围显示为可选复选框，并要求完成双因素验证和确认短语。
 
 范围：`site:user:read`
 
@@ -129,4 +158,33 @@ const { users, total } = await prism.site.listUsers(accessToken, {
 // 按 ID 查找任意用户，无需团队成员关系
 const user = await prism.site.getUser(accessToken, userId);
 console.log(user.display_name, user.avatar_url);
+```
+
+## 团队范围访问
+
+应用在范围列表中请求无绑定的团队范围（`team:read`、`team:member:read` 等），用户在授权页面选择要绑定的团队后，颁发的令牌携带绑定范围如 `team:<teamId>:member:read`。
+
+团队所有者或管理员可授予除 `team:delete` 以外的所有权限，`team:delete` 仅所有者可授予。
+
+```ts
+// OAuth 流程中请求：
+// scope = "openid profile team:read team:member:read team:member:profile:read"
+//
+// 用户选择团队后，令牌携带：
+// team:<selectedTeamId>:read  team:<selectedTeamId>:member:read  ...
+
+// 读取令牌绑定的团队
+const team = await prism.teamScope.getInfo(accessToken, teamId);
+
+// 列出成员（仅 ID + 角色）
+const members = await prism.teamScope.listMembers(accessToken, teamId);
+
+// 获取成员显示名称和头像
+const profile = await prism.teamScope.getMemberProfile(accessToken, teamId, userId);
+console.log(profile.display_name, profile.avatar_url);
+
+// 管理成员
+await prism.teamScope.addMember(accessToken, teamId, newUserId, "member");
+await prism.teamScope.updateMemberRole(accessToken, teamId, userId, "admin");
+await prism.teamScope.removeMember(accessToken, teamId, userId);
 ```
