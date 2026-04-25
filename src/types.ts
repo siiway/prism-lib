@@ -119,6 +119,9 @@ export interface OAuthApp {
   optional_scopes: string[];
   oidc_fields?: string[];
   is_public: boolean;
+  /** If true, the app may authenticate with its own client credentials
+   *  (HTTP Basic) to manage its scope definitions, without a user token. */
+  allow_self_manage_exported_permissions?: boolean;
   owner_id: string;
   created_at: string;
   updated_at: string;
@@ -144,6 +147,9 @@ export interface UpdateAppParams {
   optional_scopes?: string[];
   oidc_fields?: string[];
   is_public?: boolean;
+  /** Opt-in: allow the app to register/manage its scope definitions using
+   *  HTTP Basic auth with its client credentials. */
+  allow_self_manage_exported_permissions?: boolean;
 }
 
 // ── Teams ──

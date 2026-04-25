@@ -38,6 +38,37 @@ await prism.appScopePermissions.updateDefinition(token, appAId, def.id, {
 await prism.appScopePermissions.deleteDefinition(token, appAId, def.id);
 ```
 
+#### 应用自管理（无需用户令牌）
+
+若应用 A 在设置中开启了 `allow_self_manage_exported_permissions` 标志，便可
+使用自身客户端凭据管理其导出的权限范围定义，无需用户令牌。在构造
+`PrismClient` 时传入 `clientSecret`，并调用 `*AsSelf` 系列方法即可：
+
+```ts
+const prism = new PrismClient({
+  baseUrl,
+  clientId: appAClientId,
+  clientSecret: appAClientSecret,
+  redirectUri,
+});
+
+await prism.appScopePermissions.upsertDefinitionAsSelf(appAId, {
+  scope: "read_posts",
+  title: "读取文章",
+  description: "查看用户已发布和草稿状态的文章",
+});
+
+await prism.appScopePermissions.listDefinitionsAsSelf(appAId);
+await prism.appScopePermissions.updateDefinitionAsSelf(appAId, def.id, { ... });
+await prism.appScopePermissions.deleteDefinitionAsSelf(appAId, def.id);
+```
+
+限制：
+
+- 必须开启该标志；公开客户端（无密钥）无法使用此模式。
+- 仅接受应用自身的 `appId`——无法编辑其他应用的定义。
+- 访问控制规则管理（见下文）不在自管理范围内——仍需用户令牌。
+
 ### 管理访问控制规则
 
 ```ts

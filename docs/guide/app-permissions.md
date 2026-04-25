@@ -43,6 +43,40 @@ await prism.appScopePermissions.updateDefinition(token, appAId, def.id, {
 await prism.appScopePermissions.deleteDefinition(token, appAId, def.id);
 ```
 
+#### App-self management (no user token)
+
+If App A has the `allow_self_manage_exported_permissions` flag enabled in its
+settings, it can manage its own exported scope definitions using its own
+client credentials — no user token needed. Construct the `PrismClient` with a
+`clientSecret` and use the `*AsSelf` variants:
+
+```ts
+const prism = new PrismClient({
+  baseUrl,
+  clientId: appAClientId,
+  clientSecret: appAClientSecret,
+  redirectUri,
+});
+
+await prism.appScopePermissions.upsertDefinitionAsSelf(appAId, {
+  scope: "read_posts",
+  title: "Read posts",
+  description: "View the user's published and draft posts",
+});
+
+await prism.appScopePermissions.listDefinitionsAsSelf(appAId);
+await prism.appScopePermissions.updateDefinitionAsSelf(appAId, def.id, { ... });
+await prism.appScopePermissions.deleteDefinitionAsSelf(appAId, def.id);
+```
+
+Constraints:
+
+- The flag must be on; public clients (no secret) cannot use this mode.
+- Only the app's own `appId` is accepted — you cannot edit another app's
+  definitions.
+- Access-rule management (below) is intentionally not delegated — it still
+  requires a user token.
+
 ### Manage access rules
 
 ```ts

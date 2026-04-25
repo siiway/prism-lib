@@ -276,6 +276,11 @@ export class PrismClient {
       token?: string;
       body?: unknown;
       params?: Record<string, string>;
+      /** Authenticate as this OAuth app via HTTP Basic
+       *  (client_id:client_secret). Mutually exclusive with `token`. Requires
+       *  the client to have been constructed with a `clientSecret`. Only
+       *  endpoints that opt into app-self auth will accept this. */
+      clientAuth?: boolean;
     },
   ): Promise<T> {
     const url = new URL(path, this.baseUrl);
@@ -286,7 +291,30 @@ export class PrismClient {
     }
 
     const headers: Record<string, string> = {};
-    if (options?.token) {
+    if (options?.clientAuth) {
+      if (options.token) {
+        throw new Error(
+          "request: `token` and `clientAuth` are mutually exclusive",
+        );
+      }
+      if (!this.clientSecret) {
+        throw new Error(
+          "request: clientAuth requires a clientSecret on the PrismClient",
+        );
+      }
+      const creds = `${this.clientId}:${this.clientSecret}`;
+      // btoa is the portable way to base64-encode in browser + modern runtimes.
+      const encoded =
+        typeof btoa === "function"
+          ? btoa(creds)
+          : // Node fallback (older versions). globalThis.Buffer is not typed.
+            ((
+              globalThis as {
+                Buffer?: { from(s: string): { toString(e: string): string } };
+              }
+            ).Buffer?.from(creds).toString("base64") ?? "");
+      headers["Authorization"] = `Basic ${encoded}`;
+    } else if (options?.token) {
       headers["Authorization"] = `Bearer ${options.token}`;
     }
     if (options?.body !== undefined) {

@@ -11,7 +11,12 @@ import type {
  * Manages the custom permission scope definitions and access-control rules
  * that an OAuth app exposes to other apps.
  *
- * All operations require a user access token with write access to the app.
+ * By default, all operations require a user access token with write access to
+ * the app. The `*AsSelf` variants instead authenticate with the app's own
+ * client credentials (HTTP Basic), and require the app to have the
+ * `allow_self_register_permissions` flag enabled in its settings. Access-rule
+ * management (allow/deny lists) always requires a user token — it is not
+ * delegated to app-self auth.
  */
 export class AppScopePermissionsAPI {
   constructor(private readonly client: PrismClient) {}
@@ -26,6 +31,14 @@ export class AppScopePermissionsAPI {
     const res = await this.client.request<{
       definitions: AppScopeDefinition[];
     }>("GET", `/api/apps/${appId}/scope-definitions`, { token });
+    return res.definitions;
+  }
+
+  /** List scope definitions using the app's own client credentials. */
+  async listDefinitionsAsSelf(appId: string): Promise<AppScopeDefinition[]> {
+    const res = await this.client.request<{
+      definitions: AppScopeDefinition[];
+    }>("GET", `/api/apps/${appId}/scope-definitions`, { clientAuth: true });
     return res.definitions;
   }
 
@@ -46,6 +59,19 @@ export class AppScopePermissionsAPI {
     return res.definition;
   }
 
+  /** Create or update a scope definition using the app's own client credentials. */
+  async upsertDefinitionAsSelf(
+    appId: string,
+    params: CreateAppScopeDefinitionParams,
+  ): Promise<AppScopeDefinition> {
+    const res = await this.client.request<{ definition: AppScopeDefinition }>(
+      "POST",
+      `/api/apps/${appId}/scope-definitions`,
+      { clientAuth: true, body: params },
+    );
+    return res.definition;
+  }
+
   /** Update the title / description of a scope definition. */
   async updateDefinition(
     token: string,
@@ -61,6 +87,20 @@ export class AppScopePermissionsAPI {
     return res.definition;
   }
 
+  /** Update a scope definition using the app's own client credentials. */
+  async updateDefinitionAsSelf(
+    appId: string,
+    definitionId: string,
+    params: UpdateAppScopeDefinitionParams,
+  ): Promise<AppScopeDefinition> {
+    const res = await this.client.request<{ definition: AppScopeDefinition }>(
+      "PATCH",
+      `/api/apps/${appId}/scope-definitions/${definitionId}`,
+      { clientAuth: true, body: params },
+    );
+    return res.definition;
+  }
+
   /** Delete a scope definition. */
   async deleteDefinition(
     token: string,
@@ -71,6 +111,18 @@ export class AppScopePermissionsAPI {
       "DELETE",
       `/api/apps/${appId}/scope-definitions/${definitionId}`,
       { token },
+    );
+  }
+
+  /** Delete a scope definition using the app's own client credentials. */
+  async deleteDefinitionAsSelf(
+    appId: string,
+    definitionId: string,
+  ): Promise<void> {
+    await this.client.request(
+      "DELETE",
+      `/api/apps/${appId}/scope-definitions/${definitionId}`,
+      { clientAuth: true },
     );
   }
 
