@@ -57,7 +57,7 @@ export class TwoFactorAPI {
     const state = options?.state ?? pkce.state;
     const redirectUri = options?.redirectUri ?? this.client.redirectUri;
 
-    const body: Record<string, string> = {
+    const body: Record<string, string | boolean> = {
       client_id: this.client.clientId,
       redirect_uri: redirectUri,
       code_challenge: pkce.codeChallenge,
@@ -65,6 +65,7 @@ export class TwoFactorAPI {
     };
     if (options?.action) body.action = options.action;
     if (options?.nonce) body.nonce = options.nonce;
+    if (options?.requireCaptcha) body.require_captcha = true;
 
     const clientSecret = (this.client as unknown as ClientWithSecret)
       .clientSecret;

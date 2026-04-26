@@ -152,7 +152,7 @@ Step-up 2FA — ask Prism to have the user re-confirm with TOTP/passkey before y
 
 | Method | Description |
 | --- | --- |
-| `createChallenge(options?)` | Server-to-server: register the action with Prism, get back `{ url, challengeId, codeVerifier, state, redirectUri, expiresAt }`. Redirect the user to `url`; store `codeVerifier` and `state` server-side. |
+| `createChallenge(options?)` | Server-to-server: register the action with Prism, get back `{ url, challengeId, codeVerifier, state, redirectUri, expiresAt }`. Redirect the user to `url`; store `codeVerifier` and `state` server-side. Pass `requireCaptcha: true` to force a captcha solve at the user-facing screen even when the site default is off. |
 | `parseCallback(url, expectedState?)` | Pull `code` and `state` from the redirect Prism sent the user to. Throws on `error=…` query params or state mismatch. |
 | `verifyCode(code, codeVerifier?, redirectUri?)` | Server-side: exchange the single-use code for `{ user_id, verified_at, action, nonce, method }`. |
 

@@ -548,6 +548,11 @@ export interface Create2FAChallengeOptions {
   nonce?: string;
   /** Custom state parameter (auto-generated if omitted). */
   state?: string;
+  /** Force the user-facing 2FA page to require a captcha solve before
+   *  approving, even if the site's `require_captcha_for_2fa` setting is off.
+   *  Site admins control which provider is used. Cannot disable an enforced
+   *  site-wide captcha — only require one when the site default is off. */
+  requireCaptcha?: boolean;
 }
 
 export interface Create2FAChallenge {

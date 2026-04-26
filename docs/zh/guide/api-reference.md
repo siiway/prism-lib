@@ -152,7 +152,7 @@ new PrismClient(options: PrismClientOptions)
 
 | 方法 | 说明 |
 | --- | --- |
-| `createChallenge(options?)` | 服务端到服务端：将操作注册到 Prism，得到 `{ url, challengeId, codeVerifier, state, redirectUri, expiresAt }`。把用户重定向到 `url`；把 `codeVerifier` 和 `state` 存在会话中。 |
+| `createChallenge(options?)` | 服务端到服务端：将操作注册到 Prism，得到 `{ url, challengeId, codeVerifier, state, redirectUri, expiresAt }`。把用户重定向到 `url`；把 `codeVerifier` 和 `state` 存在会话中。传 `requireCaptcha: true` 可在站点默认关闭时,仍要求用户在前端页面通过验证码。 |
 | `parseCallback(url, expectedState?)` | 从 Prism 回调 URL 中提取 `code` 和 `state`。遇到 `error=…` 或 state 不匹配时抛错。 |
 | `verifyCode(code, codeVerifier?, redirectUri?)` | 服务端：把单次使用的 code 兑换为 `{ user_id, verified_at, action, nonce, method }`。 |
 
