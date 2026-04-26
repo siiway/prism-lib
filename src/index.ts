@@ -57,6 +57,9 @@ export type {
   TeamScopeTeam,
   TeamScopeMember,
   TeamScopeMemberProfile,
+  Create2FAChallengeOptions,
+  Create2FAChallenge,
+  Verify2FACodeResult,
 } from "./types.js";
 
 export { PrismError } from "./types.js";
@@ -81,3 +84,4 @@ export { AppNotificationsAPI } from "./api/app-notifications.js";
 export { AppScopePermissionsAPI } from "./api/app-scope-permissions.js";
 export { SiteAPI } from "./api/site.js";
 export { TeamScopeAPI } from "./api/team-scope.js";
+export { TwoFactorAPI } from "./api/two-factor.js";

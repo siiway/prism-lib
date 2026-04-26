@@ -15,6 +15,7 @@ import { AppNotificationsAPI } from "./api/app-notifications.js";
 import { AppScopePermissionsAPI } from "./api/app-scope-permissions.js";
 import { SiteAPI } from "./api/site.js";
 import { TeamScopeAPI } from "./api/team-scope.js";
+import { TwoFactorAPI } from "./api/two-factor.js";
 import { PrismError } from "./types.js";
 import type {
   PrismClientOptions,
@@ -46,6 +47,7 @@ export class PrismClient {
   readonly appScopePermissions: AppScopePermissionsAPI;
   readonly site: SiteAPI;
   readonly teamScope: TeamScopeAPI;
+  readonly twoFactor: TwoFactorAPI;
 
   constructor(options: PrismClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
@@ -66,6 +68,7 @@ export class PrismClient {
     this.appScopePermissions = new AppScopePermissionsAPI(this);
     this.site = new SiteAPI(this);
     this.teamScope = new TeamScopeAPI(this);
+    this.twoFactor = new TwoFactorAPI(this);
   }
 
   // ── OIDC Discovery ──

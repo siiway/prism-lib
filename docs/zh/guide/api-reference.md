@@ -146,6 +146,33 @@ new PrismClient(options: PrismClientOptions)
 | `updateMemberRole(token, teamId, userId, role)` | `team:<id>:member:write` | 修改成员角色 |
 | `removeMember(token, teamId, userId)` | `team:<id>:member:write` | 移除成员 |
 
+#### `prism.twoFactor`
+
+加强 2FA — 让用户在执行敏感操作前用 TOTP 或通行密钥再确认一次。流程与授权码流程一致：重定向、回调、服务端兑换。
+
+| 方法 | 说明 |
+| --- | --- |
+| `createChallenge(options?)` | 构造加强 URL + PKCE verifier + state。把用户重定向到 `url`；将 `codeVerifier` 和 `state` 存到会话中。 |
+| `buildChallengeUrl(verifier, options?)` | 用已生成的 PKCE verifier 重新构造加强 URL。 |
+| `parseCallback(url, expectedState?)` | 从 Prism 回调 URL 中提取 `code` 和 `state`。遇到 `error=…` 或 state 不匹配时抛错。 |
+| `verifyCode(code, codeVerifier?, redirectUri?)` | 服务端：把单次使用的 code 兑换为 `{ user_id, verified_at, action, nonce, method }`。 |
+
+```ts
+// 1. 重定向用户
+const challenge = await prism.twoFactor.createChallenge({
+  action: "确认转账 $1,000",
+  nonce: orderId,
+});
+session.codeVerifier = challenge.codeVerifier;
+session.state = challenge.state;
+res.redirect(challenge.url);
+
+// 2. 回调 (?code=…&state=…)
+const { code } = prism.twoFactor.parseCallback(req.url, session.state);
+const result = await prism.twoFactor.verifyCode(code, session.codeVerifier);
+// result.user_id 对应该用户，result.action 回传你最初请求的操作描述
+```
+
 ### 静态工具函数
 
 ```ts

@@ -146,6 +146,33 @@ Team-scoped tokens are issued when an app requests `team:read`, `team:write`, `t
 | `updateMemberRole(token, teamId, userId, role)` | `team:<id>:member:write` | Change a member's role |
 | `removeMember(token, teamId, userId)` | `team:<id>:member:write` | Remove a member |
 
+#### `prism.twoFactor`
+
+Step-up 2FA — ask Prism to have the user re-confirm with TOTP/passkey before your app performs a sensitive action. Mirrors the OAuth Authorization Code grant: redirect, callback, server-side exchange.
+
+| Method | Description |
+| --- | --- |
+| `createChallenge(options?)` | Build a step-up URL + PKCE verifier + state. Redirect the user to `url`; store `codeVerifier` and `state` server-side. |
+| `buildChallengeUrl(verifier, options?)` | Rebuild a step-up URL using a previously-generated PKCE verifier. |
+| `parseCallback(url, expectedState?)` | Pull `code` and `state` from the redirect Prism sent the user to. Throws on `error=…` query params or state mismatch. |
+| `verifyCode(code, codeVerifier?, redirectUri?)` | Server-side: exchange the single-use code for `{ user_id, verified_at, action, nonce, method }`. |
+
+```ts
+// 1. Redirect the user
+const challenge = await prism.twoFactor.createChallenge({
+  action: "Confirm wire transfer of $1,000",
+  nonce: orderId,
+});
+session.codeVerifier = challenge.codeVerifier;
+session.state = challenge.state;
+res.redirect(challenge.url);
+
+// 2. On callback (?code=…&state=…)
+const { code } = prism.twoFactor.parseCallback(req.url, session.state);
+const result = await prism.twoFactor.verifyCode(code, session.codeVerifier);
+// result.user_id matches the user, result.action echoes back what they confirmed
+```
+
 ### Static Helpers
 
 ```ts

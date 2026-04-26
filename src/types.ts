@@ -530,6 +530,55 @@ export interface OAuthConsent {
   created_at: string;
 }
 
+// ── Step-up 2FA ──
+
+export interface Create2FAChallengeOptions {
+  /** Override the client's default redirect URI for this challenge. */
+  redirectUri?: string;
+  /**
+   * Human-readable description of the action the user is being asked to
+   * confirm (e.g. "Confirm wire transfer of $1,000"). Shown verbatim on the
+   * Prism confirmation page and echoed back in the verify response.
+   */
+  action?: string;
+  /**
+   * Opaque app-defined value, returned as-is in the verify response. Use it
+   * to bind the 2FA result to a specific operation (e.g. an order ID).
+   */
+  nonce?: string;
+  /** Custom state parameter (auto-generated if omitted). */
+  state?: string;
+}
+
+export interface Create2FAChallenge {
+  /** URL to redirect the user to. */
+  url: string;
+  /**
+   * PKCE code verifier — store this server-side (e.g. in the user's session)
+   * and pass it to `verifyCode()` when the user comes back.
+   */
+  codeVerifier: string;
+  /** State value sent in the URL — verify on callback to defend against CSRF. */
+  state: string;
+  /** Effective redirect URI used (may be the client default or an override). */
+  redirectUri: string;
+}
+
+export interface Verify2FACodeResult {
+  /** Prism user ID who completed the 2FA. */
+  user_id: string;
+  /** Echo of the OAuth client_id that requested the challenge. */
+  client_id: string;
+  /** Unix seconds when the 2FA was completed. */
+  verified_at: number;
+  /** Echo of the `action` you passed to `createChallenge()` (or null). */
+  action: string | null;
+  /** Echo of the `nonce` you passed to `createChallenge()` (or null). */
+  nonce: string | null;
+  /** Which factor satisfied the challenge. */
+  method: "totp" | "passkey" | "backup";
+}
+
 // ── Errors ──
 
 export class PrismError extends Error {
