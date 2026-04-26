@@ -105,6 +105,145 @@ export interface UserInfo {
   updated_at?: number;
 }
 
+// ── Public Profile (unauthenticated) ──
+
+/**
+ * Metadata for a single GPG key surfaced on a user's public profile. The
+ * armored key block itself is at the long-standing `/users/:username.gpg`
+ * endpoint — this type intentionally only carries identifying fields.
+ */
+export interface PublicProfileGpgKey {
+  fingerprint: string;
+  key_id: string;
+  name: string;
+  /** Unix seconds */
+  created_at: number;
+}
+
+/** Brief listing of an OAuth app referenced from a public profile. */
+export interface PublicProfileApp {
+  client_id: string;
+  name: string;
+  /** Reverse-proxied through the Prism instance — safe to load directly. */
+  icon_url: string | null;
+  website_url: string | null;
+}
+
+/** A user-owned OAuth app surfaced on a public profile. */
+export interface PublicProfileOwnedApp extends PublicProfileApp {
+  id: string;
+  description: string;
+  /** Unix seconds */
+  created_at: number;
+}
+
+/** An app the user has authorized via OAuth, surfaced on a public profile. */
+export interface PublicProfileAuthorizedApp extends PublicProfileApp {
+  /** When the user last granted consent. Unix seconds. */
+  granted_at: number;
+}
+
+/**
+ * The public face of a user — every field beyond `username` is `null` if the
+ * user opted not to share it, the site default keeps it hidden, or the
+ * feature is disabled site-wide. A response is only returned at all when
+ * the user has explicitly opted in (or you're authenticated as them).
+ */
+export interface PublicUserProfile {
+  username: string;
+  display_name: string | null;
+  /** Reverse-proxied avatar URL — safe to load directly. */
+  avatar_url: string | null;
+  /** Original avatar URL before proxy rewriting. */
+  unproxied_avatar_url: string | null;
+  email: string | null;
+  /** Account creation time, Unix seconds. */
+  joined_at: number | null;
+  gpg_keys: PublicProfileGpgKey[] | null;
+  authorized_apps: PublicProfileAuthorizedApp[] | null;
+  owned_apps: PublicProfileOwnedApp[] | null;
+  /** User-owned, verified domains. */
+  domains: PublicProfileDomain[] | null;
+  /** Public teams the user is a member of. Honors both the user's own
+   *  master toggle and any per-team override. `null` when the master toggle
+   *  is off and no per-team override pins anything. */
+  joined_teams: PublicProfileJoinedTeam[] | null;
+}
+
+/** A team the user is a member of, surfaced on their public profile.
+ *  Only public teams appear here. */
+export interface PublicProfileJoinedTeam {
+  id: string;
+  name: string;
+  /** Reverse-proxied avatar URL — safe to load directly. */
+  avatar_url: string | null;
+  role: "owner" | "co-owner" | "admin" | "member";
+}
+
+/** A verified domain attached to either a user or a team's public profile. */
+export interface PublicProfileDomain {
+  domain: string;
+  /** Unix seconds; `null` if the domain was created without verification
+   *  recorded (legacy data — modern domains always have this). */
+  verified_at: number | null;
+}
+
+/**
+ * Owner reference exposed on a public team profile. When the team owner has
+ * opted to surface themselves but their own user profile is private, only
+ * `display_name` is set — `username` and `avatar_url` are `null` so the
+ * team page doesn't link out to a profile they haven't opted into.
+ */
+export interface PublicTeamOwner {
+  username: string | null;
+  display_name: string;
+  avatar_url: string | null;
+}
+
+/** A team-owned OAuth app surfaced on a public team profile. */
+export interface PublicTeamApp {
+  id: string;
+  client_id: string;
+  name: string;
+  description: string;
+  icon_url: string | null;
+  website_url: string | null;
+  created_at: number;
+}
+
+/**
+ * The public face of a team. Same null-when-hidden semantics as
+ * {@link PublicUserProfile}: any section the team chose not to share
+ * (or that the site default keeps hidden) is `null`.
+ */
+export interface PublicTeamProfile {
+  id: string;
+  name: string;
+  description: string | null;
+  avatar_url: string | null;
+  unproxied_avatar_url: string | null;
+  /** Unix seconds. */
+  created_at: number;
+  owner: PublicTeamOwner | null;
+  /** Total team member count, or `null` if the team chose not to expose it. */
+  member_count: number | null;
+  apps: PublicTeamApp[] | null;
+  domains: PublicProfileDomain[] | null;
+  /** Members of the team. Each entry is also gated by that user's own
+   *  `profile_show_joined_teams` (and any per-team override) — a member
+   *  who hides this team from their profile is also omitted here. */
+  members: PublicTeamMember[] | null;
+}
+
+/** A team member surfaced on a public team profile. Only members whose
+ *  own profile is public AND who haven't hidden this team appear here. */
+export interface PublicTeamMember {
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  role: "owner" | "co-owner" | "admin" | "member";
+}
+
 // ── OAuth Apps ──
 
 export interface OAuthApp {

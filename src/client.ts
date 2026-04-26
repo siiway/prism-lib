@@ -25,6 +25,8 @@ import type {
   TokenIntrospectionResponse,
   OIDCDiscovery,
   UserInfo,
+  PublicUserProfile,
+  PublicTeamProfile,
 } from "./types.js";
 
 export class PrismClient {
@@ -239,6 +241,70 @@ export class PrismClient {
     return this.request<UserInfo>("GET", "/api/oauth/userinfo", {
       token: accessToken,
     });
+  }
+
+  // ── Public Profile (unauthenticated) ──
+
+  /**
+   * Fetch a user's public profile. No token required — the visibility is
+   * controlled by the user's own opt-in and per-field settings.
+   *
+   * Returns `null` if the user does not exist, has not opted into a public
+   * profile, or the instance has the feature disabled. The endpoint
+   * intentionally returns the same 404 for all three cases so it can't be
+   * used to enumerate usernames.
+   *
+   * Pass an `accessToken` to view a private profile when the token belongs
+   * to that user — useful for showing a "this is what others see" preview.
+   */
+  async getPublicProfile(
+    username: string,
+    options?: { accessToken?: string },
+  ): Promise<PublicUserProfile | null> {
+    try {
+      const { profile } = await this.request<{ profile: PublicUserProfile }>(
+        "GET",
+        `/api/users/${encodeURIComponent(username)}`,
+        options?.accessToken ? { token: options.accessToken } : undefined,
+      );
+      return profile;
+    } catch (err) {
+      if (
+        err instanceof PrismError &&
+        (err.status === 404 || err.status === 403)
+      ) {
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Fetch a team's public profile. Same semantics as
+   * {@link getPublicProfile}: returns `null` for missing/private teams,
+   * never an exception. Pass an `accessToken` belonging to a team member
+   * to view a private team — useful for previews from inside the team.
+   */
+  async getPublicTeamProfile(
+    teamId: string,
+    options?: { accessToken?: string },
+  ): Promise<PublicTeamProfile | null> {
+    try {
+      const { team } = await this.request<{ team: PublicTeamProfile }>(
+        "GET",
+        `/api/public/teams/${encodeURIComponent(teamId)}`,
+        options?.accessToken ? { token: options.accessToken } : undefined,
+      );
+      return team;
+    } catch (err) {
+      if (
+        err instanceof PrismError &&
+        (err.status === 404 || err.status === 403)
+      ) {
+        return null;
+      }
+      throw err;
+    }
   }
 
   // ── Consent Management ──

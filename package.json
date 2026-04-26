@@ -1,6 +1,6 @@
 {
   "name": "@siiway/prism",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "TypeScript SDK for integrating Prism OAuth 2.0 / OpenID Connect identity platform",
   "type": "module",
   "main": "./dist/index.cjs",

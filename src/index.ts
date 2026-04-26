@@ -60,6 +60,17 @@ export type {
   Create2FAChallengeOptions,
   Create2FAChallenge,
   Verify2FACodeResult,
+  PublicUserProfile,
+  PublicProfileGpgKey,
+  PublicProfileApp,
+  PublicProfileOwnedApp,
+  PublicProfileAuthorizedApp,
+  PublicProfileDomain,
+  PublicProfileJoinedTeam,
+  PublicTeamProfile,
+  PublicTeamOwner,
+  PublicTeamApp,
+  PublicTeamMember,
 } from "./types.js";
 
 export { PrismError } from "./types.js";
