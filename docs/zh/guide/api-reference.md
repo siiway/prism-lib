@@ -148,17 +148,16 @@ new PrismClient(options: PrismClientOptions)
 
 #### `prism.twoFactor`
 
-加强 2FA — 让用户在执行敏感操作前用 TOTP 或通行密钥再确认一次。流程与授权码流程一致：重定向、回调、服务端兑换。
+加强 2FA — 让用户在执行敏感操作前用 TOTP 或通行密钥再确认一次。服务端发起：先由你的服务器通过 HTTPS 将操作注册到 Prism，然后才重定向用户。重定向 URL 只携带不透明的 `challenge_id`，所以仅控制 URL 的钓鱼者无法注入任意操作文本。
 
 | 方法 | 说明 |
 | --- | --- |
-| `createChallenge(options?)` | 构造加强 URL + PKCE verifier + state。把用户重定向到 `url`；将 `codeVerifier` 和 `state` 存到会话中。 |
-| `buildChallengeUrl(verifier, options?)` | 用已生成的 PKCE verifier 重新构造加强 URL。 |
+| `createChallenge(options?)` | 服务端到服务端：将操作注册到 Prism，得到 `{ url, challengeId, codeVerifier, state, redirectUri, expiresAt }`。把用户重定向到 `url`；把 `codeVerifier` 和 `state` 存在会话中。 |
 | `parseCallback(url, expectedState?)` | 从 Prism 回调 URL 中提取 `code` 和 `state`。遇到 `error=…` 或 state 不匹配时抛错。 |
 | `verifyCode(code, codeVerifier?, redirectUri?)` | 服务端：把单次使用的 code 兑换为 `{ user_id, verified_at, action, nonce, method }`。 |
 
 ```ts
-// 1. 重定向用户
+// 1. 服务端到服务端：注册操作，然后重定向
 const challenge = await prism.twoFactor.createChallenge({
   action: "确认转账 $1,000",
   nonce: orderId,
@@ -170,7 +169,9 @@ res.redirect(challenge.url);
 // 2. 回调 (?code=…&state=…)
 const { code } = prism.twoFactor.parseCallback(req.url, session.state);
 const result = await prism.twoFactor.verifyCode(code, session.codeVerifier);
-// result.user_id 对应该用户，result.action 回传你最初请求的操作描述
+// 始终核对 action 和 nonce 与第 1 步固定的值是否一致
+if (result.nonce !== orderId) throw new Error("nonce mismatch");
+// result.user_id 即完成 2FA 的 Prism 用户
 ```
 
 ### 静态工具函数

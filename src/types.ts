@@ -551,8 +551,12 @@ export interface Create2FAChallengeOptions {
 }
 
 export interface Create2FAChallenge {
-  /** URL to redirect the user to. */
+  /** URL to redirect the user to. Carries only `challenge_id` and `state` — the
+   *  action text and redirect URI are pinned server-side and not in the URL. */
   url: string;
+  /** Opaque challenge ID Prism issued — primarily diagnostic; you usually
+   *  only need `url`, `codeVerifier`, and `state`. */
+  challengeId: string;
   /**
    * PKCE code verifier — store this server-side (e.g. in the user's session)
    * and pass it to `verifyCode()` when the user comes back.
@@ -562,6 +566,8 @@ export interface Create2FAChallenge {
   state: string;
   /** Effective redirect URI used (may be the client default or an override). */
   redirectUri: string;
+  /** Unix seconds when the challenge expires (typically 15 min from creation). */
+  expiresAt: number;
 }
 
 export interface Verify2FACodeResult {

@@ -1,8 +1,4 @@
-import {
-  generateCodeChallenge,
-  generateState,
-  generatePKCEChallenge,
-} from "../pkce.js";
+import { generatePKCEChallenge } from "../pkce.js";
 import { PrismError } from "../types.js";
 import type { PrismClient } from "../client.js";
 import type {
@@ -19,22 +15,28 @@ interface ClientWithSecret {
  * Step-up 2FA — ask Prism to have the user re-confirm with TOTP/passkey
  * before your app performs a sensitive action.
  *
- * Flow:
- *   1. `createChallenge()` — generates PKCE + state, returns the URL to redirect
- *      the user to and the secrets you need to keep on the server side.
- *   2. User completes 2FA on Prism, gets redirected back to your `redirectUri`
- *      with `?code=...&state=...` (or `?error=access_denied`).
+ * Flow (server-initiated, phishing-resistant):
+ *   1. `createChallenge()` — your server calls Prism over HTTPS to register
+ *      the action and pin the redirect URI. Prism returns an opaque
+ *      `challenge_id` and the URL to redirect the user to. The URL contains
+ *      no action text or redirect URI: a phisher who only controls a URL
+ *      cannot trick the user into confirming an arbitrary action.
+ *   2. User completes 2FA on Prism, gets redirected to the pinned redirect
+ *      URI with `?code=...&state=...` (or `?error=access_denied`).
  *   3. `verifyCode()` — exchange the code (server-side) for the verification
- *      result `{ user_id, verified_at, action, ... }`.
+ *      result `{ user_id, verified_at, action, nonce, method }`.
  *
- * The code is single-use and expires after ~5 minutes.
+ * The challenge is single-use, expires after 15 min; the resulting code is
+ * also single-use and expires 5 min after the user confirms.
  */
 export class TwoFactorAPI {
   constructor(private readonly client: PrismClient) {}
 
   /**
-   * Build a step-up 2FA URL plus the per-request secrets to store server-side
-   * (PKCE verifier and `state`) until the user comes back.
+   * Create a server-initiated 2FA challenge and build the URL the user should
+   * be redirected to. Calls Prism's `POST /api/oauth/2fa/challenges` with
+   * the app's credentials, so the action text and redirect URI are pinned
+   * server-side and cannot be tampered with by anyone who only controls a URL.
    *
    * @example
    * ```ts
@@ -49,52 +51,46 @@ export class TwoFactorAPI {
   async createChallenge(
     options?: Create2FAChallengeOptions,
   ): Promise<Create2FAChallenge> {
+    // Always generate PKCE — the worker requires it for public clients,
+    // and it costs nothing to use for confidential clients too.
     const pkce = await generatePKCEChallenge();
     const state = options?.state ?? pkce.state;
     const redirectUri = options?.redirectUri ?? this.client.redirectUri;
 
-    const params = new URLSearchParams({
+    const body: Record<string, string> = {
       client_id: this.client.clientId,
       redirect_uri: redirectUri,
-      state,
       code_challenge: pkce.codeChallenge,
       code_challenge_method: "S256",
-    });
-    if (options?.action) params.set("action", options.action);
-    if (options?.nonce) params.set("nonce", options.nonce);
+    };
+    if (options?.action) body.action = options.action;
+    if (options?.nonce) body.nonce = options.nonce;
 
-    const url = `${this.client.baseUrl}/api/oauth/2fa?${params.toString()}`;
+    const clientSecret = (this.client as unknown as ClientWithSecret)
+      .clientSecret;
+    if (clientSecret) body.client_secret = clientSecret;
+
+    const res = await this.client.request<{
+      challenge_id: string;
+      expires_at: number;
+      url: string;
+    }>("POST", "/api/oauth/2fa/challenges", { body });
+
+    // The server returns a fully-formed URL, but we tack on `state` here
+    // since the server doesn't store it (the user might want a different
+    // state per-redirect). Use the server's URL as the base so we honor
+    // any redirect normalization it does.
+    const url = new URL(res.url);
+    url.searchParams.set("state", state);
+
     return {
-      url,
+      url: url.toString(),
+      challengeId: res.challenge_id,
       codeVerifier: pkce.codeVerifier,
       state,
       redirectUri,
+      expiresAt: res.expires_at,
     };
-  }
-
-  /**
-   * Build a step-up 2FA URL using a pre-existing PKCE verifier. Useful when
-   * you've already stored the verifier and want to rebuild the URL.
-   */
-  async buildChallengeUrl(
-    codeVerifier: string,
-    options?: Create2FAChallengeOptions,
-  ): Promise<string> {
-    const codeChallenge = await generateCodeChallenge(codeVerifier);
-    const state = options?.state ?? generateState();
-    const redirectUri = options?.redirectUri ?? this.client.redirectUri;
-
-    const params = new URLSearchParams({
-      client_id: this.client.clientId,
-      redirect_uri: redirectUri,
-      state,
-      code_challenge: codeChallenge,
-      code_challenge_method: "S256",
-    });
-    if (options?.action) params.set("action", options.action);
-    if (options?.nonce) params.set("nonce", options.nonce);
-
-    return `${this.client.baseUrl}/api/oauth/2fa?${params.toString()}`;
   }
 
   /**
@@ -115,9 +111,6 @@ export class TwoFactorAPI {
     codeVerifier?: string,
     redirectUri?: string,
   ): Promise<Verify2FACodeResult> {
-    // The /2fa/verify endpoint accepts a JSON body and authenticates the
-    // client via `client_secret` in the body OR HTTP Basic. We send the
-    // secret in the body so public clients (no secret) just work.
     const body: Record<string, string> = {
       code,
       client_id: this.client.clientId,

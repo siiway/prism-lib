@@ -148,17 +148,16 @@ Team-scoped tokens are issued when an app requests `team:read`, `team:write`, `t
 
 #### `prism.twoFactor`
 
-Step-up 2FA — ask Prism to have the user re-confirm with TOTP/passkey before your app performs a sensitive action. Mirrors the OAuth Authorization Code grant: redirect, callback, server-side exchange.
+Step-up 2FA — ask Prism to have the user re-confirm with TOTP/passkey before your app performs a sensitive action. Server-initiated: your server calls Prism over HTTPS to register the action, and only then redirects the user. The redirect URL carries only an opaque `challenge_id`, so a phisher who controls only a URL cannot inject arbitrary action text.
 
 | Method | Description |
 | --- | --- |
-| `createChallenge(options?)` | Build a step-up URL + PKCE verifier + state. Redirect the user to `url`; store `codeVerifier` and `state` server-side. |
-| `buildChallengeUrl(verifier, options?)` | Rebuild a step-up URL using a previously-generated PKCE verifier. |
+| `createChallenge(options?)` | Server-to-server: register the action with Prism, get back `{ url, challengeId, codeVerifier, state, redirectUri, expiresAt }`. Redirect the user to `url`; store `codeVerifier` and `state` server-side. |
 | `parseCallback(url, expectedState?)` | Pull `code` and `state` from the redirect Prism sent the user to. Throws on `error=…` query params or state mismatch. |
 | `verifyCode(code, codeVerifier?, redirectUri?)` | Server-side: exchange the single-use code for `{ user_id, verified_at, action, nonce, method }`. |
 
 ```ts
-// 1. Redirect the user
+// 1. Server-to-server: register the action, then redirect
 const challenge = await prism.twoFactor.createChallenge({
   action: "Confirm wire transfer of $1,000",
   nonce: orderId,
@@ -170,7 +169,9 @@ res.redirect(challenge.url);
 // 2. On callback (?code=…&state=…)
 const { code } = prism.twoFactor.parseCallback(req.url, session.state);
 const result = await prism.twoFactor.verifyCode(code, session.codeVerifier);
-// result.user_id matches the user, result.action echoes back what they confirmed
+// Always verify the action and nonce match what your app pinned in step 1
+if (result.nonce !== orderId) throw new Error("nonce mismatch");
+// result.user_id is the Prism user who completed 2FA
 ```
 
 ### Static Helpers
