@@ -168,6 +168,23 @@ export interface PublicUserProfile {
    *  master toggle and any per-team override. `null` when the master toggle
    *  is off and no per-team override pins anything. */
   joined_teams: PublicProfileJoinedTeam[] | null;
+  /**
+   * Raw markdown source of the user's profile README. The Prism public
+   * profile UI sanitizes this and rewrites image references through the
+   * site's image proxy before rendering — third-party consumers MUST do
+   * the equivalent (`marked` + `DOMPurify` or similar) before injecting it
+   * into a page. `null` when the user has no README, has hidden it, or
+   * the source is GitHub and the cached fetch failed with no fallback.
+   */
+  readme: string | null;
+  /** Unix seconds. For `readme_source === "manual"` this is the user's last
+   *  edit time; for `"github"` this only changes when the user edits source
+   *  metadata (sync time is internal to the cache). */
+  readme_updated_at: number | null;
+  /** Whether the README was authored in Prism (`"manual"`) or fetched from
+   *  the user's GitHub `<login>/<login>` repo (`"github"`). `null` when
+   *  the README is hidden. */
+  readme_source: "manual" | "github" | null;
 }
 
 /** A team the user is a member of, surfaced on their public profile.
