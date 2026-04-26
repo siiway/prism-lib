@@ -171,7 +171,12 @@ const { code } = prism.twoFactor.parseCallback(req.url, session.state);
 const result = await prism.twoFactor.verifyCode(code, session.codeVerifier);
 // 始终核对 action 和 nonce 与第 1 步固定的值是否一致
 if (result.nonce !== orderId) throw new Error("nonce mismatch");
-// result.user_id 即完成 2FA 的 Prism 用户
+// result.user_id 即完成 2FA 的 Prism 用户。
+// result.method 为 "totp" | "passkey" | "backup" | "sudo"。
+// 极高风险操作应拒绝 sudo 宽限路径：
+if (result.method === "sudo" && amount > 10_000) {
+  throw new Error("Fresh 2FA required for this amount");
+}
 ```
 
 ### 静态工具函数

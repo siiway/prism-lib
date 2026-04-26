@@ -581,8 +581,11 @@ export interface Verify2FACodeResult {
   action: string | null;
   /** Echo of the `nonce` you passed to `createChallenge()` (or null). */
   nonce: string | null;
-  /** Which factor satisfied the challenge. */
-  method: "totp" | "passkey" | "backup";
+  /** Which factor satisfied the challenge. `"sudo"` means the user did not
+   *  re-prompt for TOTP/passkey: a previous successful 2FA on the same session
+   *  for this client was still inside its grace window. Apps performing very
+   *  high-stakes operations should require `method !== "sudo"`. */
+  method: "totp" | "passkey" | "backup" | "sudo";
 }
 
 // ── Errors ──

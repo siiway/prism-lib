@@ -171,7 +171,12 @@ const { code } = prism.twoFactor.parseCallback(req.url, session.state);
 const result = await prism.twoFactor.verifyCode(code, session.codeVerifier);
 // Always verify the action and nonce match what your app pinned in step 1
 if (result.nonce !== orderId) throw new Error("nonce mismatch");
-// result.user_id is the Prism user who completed 2FA
+// result.user_id is the Prism user who completed 2FA.
+// result.method is "totp" | "passkey" | "backup" | "sudo". For very
+// high-stakes ops, refuse the sudo grace path:
+if (result.method === "sudo" && amount > 10_000) {
+  throw new Error("Fresh 2FA required for this amount");
+}
 ```
 
 ### Static Helpers
