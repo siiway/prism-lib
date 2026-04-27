@@ -278,7 +278,15 @@ export interface OAuthApp {
   /** If true, the app may authenticate with its own client credentials
    *  (HTTP Basic) to manage its scope definitions, without a user token. */
   allow_self_manage_exported_permissions?: boolean;
+  /**
+   * Unified ownership reference. After the teams-as-users migration, an
+   * app owned by a team has `owner_id === team_id` and the underlying row
+   * is a synthetic `kind='team'` user mirroring the team. For personal
+   * apps `owner_id` is the creator's user id and `team_id` is null.
+   */
   owner_id: string;
+  /** Non-null when the app is owned by a team. Equals the team's id. */
+  team_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -413,6 +421,36 @@ export interface TeamApp extends OAuthApp {
   is_verified: boolean;
   is_official: boolean;
   is_first_party: boolean;
+}
+
+/**
+ * A team-owned OAuth app surfaced via the `/me/team-apps` endpoint. Returned
+ * for any team the bearer is a member of, but only owners and co-owners may
+ * actually mutate the app via PATCH/DELETE — non-owners get a 403 even
+ * though the app appears in the listing.
+ */
+export interface TeamOwnedApp {
+  id: string;
+  name: string;
+  description: string | null;
+  client_id: string;
+  icon_url: string | null;
+  unproxied_icon_url: string | null;
+  website_url: string | null;
+  is_public: boolean;
+  is_active: boolean;
+  team_id: string;
+  team_name: string;
+  /** Reverse-proxied team avatar — safe to load directly. */
+  team_avatar_url: string | null;
+  unproxied_team_avatar_url: string | null;
+  /** Caller's role inside the owning team. */
+  my_role: "owner" | "co-owner" | "admin" | "member";
+  /** True when the caller can grant scopes / mutate the app
+   *  (i.e. role is owner or co-owner). */
+  can_grant: boolean;
+  created_at: number;
+  updated_at: number;
 }
 
 // ── Domains ──

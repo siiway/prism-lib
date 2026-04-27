@@ -26,6 +26,7 @@ export type {
   TeamInviteInfo,
   TeamDomain,
   TeamApp,
+  TeamOwnedApp,
   Domain,
   Webhook,
   WebhookDelivery,
