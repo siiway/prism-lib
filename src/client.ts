@@ -27,6 +27,8 @@ import type {
   UserInfo,
   PublicUserProfile,
   PublicTeamProfile,
+  PublicSiteInfo,
+  OAuthConsent,
 } from "./types.js";
 
 export class PrismClient {
@@ -309,23 +311,77 @@ export class PrismClient {
 
   // ── Consent Management ──
 
-  /** List apps the user has granted OAuth access to */
-  async listConsents(accessToken: string) {
-    return this.request<
-      Array<{
-        client_id: string;
-        app_name: string;
-        scopes: string[];
-        created_at: string;
-      }>
-    >("GET", "/api/oauth/consents", { token: accessToken });
+  /**
+   * List the apps the authenticated user has granted OAuth access to,
+   * grouped by app. Each entry carries the app's metadata plus every
+   * still-valid token issued under that consent.
+   *
+   * Requires a session token (or PAT) — not a plain OAuth access token.
+   */
+  async listConsents(accessToken: string): Promise<OAuthConsent[]> {
+    const res = await this.request<{ consents: OAuthConsent[] }>(
+      "GET",
+      "/api/oauth/consents",
+      { token: accessToken },
+    );
+    return res.consents;
   }
 
-  /** Revoke OAuth consent for a specific app */
+  /** Revoke OAuth consent for a specific app — destroys all of its
+   *  outstanding tokens too. */
   async revokeConsent(accessToken: string, clientId: string): Promise<void> {
-    await this.request("DELETE", `/api/oauth/consents/${clientId}`, {
-      token: accessToken,
-    });
+    await this.request(
+      "DELETE",
+      `/api/oauth/consents/${encodeURIComponent(clientId)}`,
+      { token: accessToken },
+    );
+  }
+
+  /** Revoke a single token by its opaque id (the `id` field on the
+   *  consent's `tokens` array). Leaves the consent itself in place. */
+  async revokeConsentToken(
+    accessToken: string,
+    tokenId: string,
+  ): Promise<void> {
+    await this.request(
+      "DELETE",
+      `/api/oauth/me/tokens/${encodeURIComponent(tokenId)}`,
+      { token: accessToken },
+    );
+  }
+
+  // ── Public site info ──
+
+  /** Read the site's public configuration (branding, registration
+   *  policy, captcha settings, enabled social providers). Unauthenticated. */
+  async getSiteInfo(): Promise<PublicSiteInfo> {
+    return this.request<PublicSiteInfo>("GET", "/api/site");
+  }
+
+  /** Cheap liveness probe — returns `{ ok: true }` on a healthy worker. */
+  async health(): Promise<{ ok: boolean }> {
+    return this.request<{ ok: boolean }>("GET", "/api/health");
+  }
+
+  /**
+   * Fetch a user's published GPG public keys as a single armored block,
+   * suitable for `gpg --import`. Returns `null` when the user doesn't
+   * exist or has no keys.
+   *
+   * Backed by Prism's `/users/:username.gpg` endpoint — the long-standing
+   * convention used by GitHub/GitLab/Codeberg for the same purpose.
+   */
+  async getPublicGpgKeys(username: string): Promise<string | null> {
+    const url = new URL(
+      `/users/${encodeURIComponent(username)}.gpg`,
+      this.baseUrl,
+    );
+    const response = await this._fetch(url.toString(), { method: "GET" });
+    if (response.status === 404) return null;
+    if (!response.ok) {
+      throw new PrismError(response.statusText, response.status);
+    }
+    return response.text();
   }
 
   // ── PKCE Helpers (static) ──

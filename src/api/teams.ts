@@ -154,6 +154,28 @@ export class TeamsAPI {
     await this.client.request("DELETE", `/api/teams/${teamId}`, { token });
   }
 
+  /**
+   * Set whether this team appears on the caller's public profile, overriding
+   * the user's master `profile_show_joined_teams` toggle.
+   *
+   * - `true` pins the team to the profile even when the master is off.
+   * - `false` hides it even when the master is on.
+   * - `null` reverts to following the master toggle.
+   *
+   * Caller must be a member of the team.
+   */
+  async setShowOnProfile(
+    token: string,
+    teamId: string,
+    value: boolean | null,
+  ): Promise<{ show_on_profile: boolean | null }> {
+    return this.client.request(
+      "PATCH",
+      `/api/teams/${encodeURIComponent(teamId)}/membership/show-on-profile`,
+      { token, body: { show_on_profile: value } },
+    );
+  }
+
   // ────────────────────────────────────────────────────────────────────────────
   // Members
   // ────────────────────────────────────────────────────────────────────────────

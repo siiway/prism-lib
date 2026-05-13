@@ -12,6 +12,7 @@ export type {
   OIDCDiscovery,
   User,
   UserInfo,
+  OAuthProfile,
   OAuthApp,
   CreateAppParams,
   UpdateAppParams,
@@ -28,6 +29,7 @@ export type {
   TeamApp,
   TeamOwnedApp,
   Domain,
+  OAuthDomain,
   Webhook,
   WebhookDelivery,
   CreateWebhookParams,
@@ -39,6 +41,7 @@ export type {
   AdminUser,
   PaginatedResponse,
   SiteConfig,
+  PublicSiteInfo,
   OAuthConsent,
   AppEventType,
   AppWebhook,
@@ -73,6 +76,8 @@ export type {
   PublicTeamApp,
   PublicTeamMember,
 } from "./types.js";
+
+export type { AddDomainResponse, VerifyDomainResponse } from "./api/domains.js";
 
 export { PrismError } from "./types.js";
 

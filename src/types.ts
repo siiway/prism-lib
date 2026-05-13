@@ -83,25 +83,55 @@ export interface OIDCDiscovery {
 export interface User {
   id: string;
   username: string;
-  email: string;
-  display_name?: string;
-  avatar_url?: string;
-  /** Original avatar URL before reverse-proxy rewriting */
-  unproxied_avatar_url?: string;
+  email?: string;
+  display_name?: string | null;
+  /** Reverse-proxied avatar URL — safe to load directly. */
+  avatar_url?: string | null;
+  /** Original avatar URL before reverse-proxy rewriting. */
+  unproxied_avatar_url?: string | null;
   role: string;
-  email_verified: boolean;
-  created_at: string;
-  updated_at: string;
+  email_verified?: boolean;
+  /** Whether the account is enabled. Only returned by admin endpoints. */
+  is_active?: boolean;
+  /** Distinguishes real users from synthetic team-mirror users used for
+   *  team-owned OAuth apps. Defaults to `"user"` when omitted. */
+  kind?: "user" | "team";
+  /** Unix seconds. */
+  created_at: number;
+  /** Unix seconds. Only returned on detail/update endpoints. */
+  updated_at?: number;
 }
 
+/** Shape returned by `GET /api/oauth/me/profile` — fields beyond
+ *  `id` / `username` / `role` are gated by the token's scopes (e.g.
+ *  `email` only appears when the token was granted the `email` scope). */
+export interface OAuthProfile {
+  id: string;
+  username: string;
+  display_name: string | null;
+  /** Reverse-proxied — safe to load directly. */
+  avatar_url: string | null;
+  unproxied_avatar_url: string | null;
+  /** Only present when the token has the `email` scope. */
+  email?: string;
+  /** Only present when the token has the `email` scope. */
+  email_verified?: boolean;
+  role: string;
+  /** Unix seconds. */
+  created_at: number;
+}
+
+/** Standard OIDC `userinfo` claims. The exact field set depends on the
+ *  scopes the token was issued with (`openid`, `profile`, `email`). */
 export interface UserInfo {
   sub: string;
   name?: string;
   preferred_username?: string;
   email?: string;
   email_verified?: boolean;
-  /** Proxied picture URL */
+  /** Proxied picture URL — safe to load directly. */
   picture?: string;
+  /** Unix seconds. */
   updated_at?: number;
 }
 
@@ -268,13 +298,27 @@ export interface OAuthApp {
   name: string;
   description?: string;
   client_id: string;
+  /** Only returned on create / rotate-secret responses. */
   client_secret?: string;
-  website_url?: string;
+  /** Reverse-proxied icon URL — safe to load directly. May be null. */
+  icon_url?: string | null;
+  /** Original icon URL before proxy rewriting. */
+  unproxied_icon_url?: string | null;
+  website_url?: string | null;
   redirect_uris: string[];
   allowed_scopes: string[];
-  optional_scopes: string[];
+  optional_scopes?: string[];
   oidc_fields?: string[];
+  /** True for public clients (no client secret stored). Some listing
+   *  endpoints return this as the raw numeric column (0/1) — treat as
+   *  truthy if you encounter that. */
   is_public: boolean;
+  is_active?: boolean;
+  is_verified?: boolean;
+  is_official?: boolean;
+  is_first_party?: boolean;
+  /** Issue JWT access tokens instead of opaque DB-backed tokens. */
+  use_jwt_tokens?: boolean;
   /** If true, the app may authenticate with its own client credentials
    *  (HTTP Basic) to manage its scope definitions, without a user token. */
   allow_self_manage_exported_permissions?: boolean;
@@ -284,33 +328,44 @@ export interface OAuthApp {
    * is a synthetic `kind='team'` user mirroring the team. For personal
    * apps `owner_id` is the creator's user id and `team_id` is null.
    */
-  owner_id: string;
+  owner_id?: string;
   /** Non-null when the app is owned by a team. Equals the team's id. */
   team_id?: string | null;
-  created_at: string;
-  updated_at: string;
+  /** Convenience fields surfaced by some listing endpoints. */
+  owner_username?: string | null;
+  team_name?: string | null;
+  team_avatar_url?: string | null;
+  /** Unix seconds. */
+  created_at: number;
+  /** Unix seconds. */
+  updated_at?: number;
 }
 
 export interface CreateAppParams {
   name: string;
   description?: string;
+  icon_url?: string;
   website_url?: string;
   redirect_uris: string[];
-  allowed_scopes: string[];
+  allowed_scopes?: string[];
   optional_scopes?: string[];
   oidc_fields?: string[];
   is_public?: boolean;
+  use_jwt_tokens?: boolean;
+  allow_self_manage_exported_permissions?: boolean;
 }
 
 export interface UpdateAppParams {
   name?: string;
   description?: string;
-  website_url?: string;
+  icon_url?: string | null;
+  website_url?: string | null;
   redirect_uris?: string[];
   allowed_scopes?: string[];
   optional_scopes?: string[];
   oidc_fields?: string[];
   is_public?: boolean;
+  use_jwt_tokens?: boolean;
   /** Opt-in: allow the app to register/manage its scope definitions using
    *  HTTP Basic auth with its client credentials. */
   allow_self_manage_exported_permissions?: boolean;
@@ -322,16 +377,33 @@ export interface Team {
   id: string;
   name: string;
   description?: string;
-  avatar_url?: string;
-  /** Original avatar URL before reverse-proxy rewriting */
-  unproxied_avatar_url?: string;
+  /** Reverse-proxied avatar URL — safe to load directly. */
+  avatar_url?: string | null;
+  /** Original avatar URL before reverse-proxy rewriting. */
+  unproxied_avatar_url?: string | null;
   /** User's role in this team (from list endpoints) */
   role?: string;
   /** User's role in this team (from detail endpoint) */
   my_role?: string;
   /** When the user joined this team (from OAuth list) */
   joined_at?: number;
+  /** Whether the caller has chosen to surface this team on their own
+   *  public profile. `null` means "follow the master toggle"; only
+   *  surfaced on session-API listings of the caller's memberships. */
+  show_on_profile?: boolean | null;
+  /** Whether the team has opted into a public profile at all. */
+  profile_is_public?: boolean;
+  /** Per-section overrides — `null` means "follow the site default". */
+  profile_show_description?: boolean | null;
+  profile_show_avatar?: boolean | null;
+  profile_show_owner?: boolean | null;
+  profile_show_member_count?: boolean | null;
+  profile_show_apps?: boolean | null;
+  profile_show_domains?: boolean | null;
+  profile_show_members?: boolean | null;
+  /** Unix seconds. */
   created_at: number;
+  /** Unix seconds. */
   updated_at?: number;
 }
 
@@ -339,10 +411,13 @@ export interface TeamMember {
   user_id: string;
   username: string;
   display_name?: string;
-  avatar_url?: string;
-  /** Original avatar URL before reverse-proxy rewriting */
-  unproxied_avatar_url?: string;
+  avatar_url?: string | null;
+  unproxied_avatar_url?: string | null;
   role: "owner" | "co-owner" | "admin" | "member";
+  /** Whether this member opted to surface the team on their own profile.
+   *  `null` means "follow the user's master toggle". */
+  show_on_profile?: boolean | null;
+  /** Unix seconds. */
   joined_at: number;
 }
 
@@ -364,7 +439,17 @@ export interface CreateTeamParams {
 export interface UpdateTeamParams {
   name?: string;
   description?: string;
-  avatar_url?: string;
+  avatar_url?: string | null;
+  /** Master toggle for the team's public profile. */
+  profile_is_public?: boolean;
+  /** Per-section overrides — `null` resets to the site default. */
+  profile_show_description?: boolean | null;
+  profile_show_avatar?: boolean | null;
+  profile_show_owner?: boolean | null;
+  profile_show_member_count?: boolean | null;
+  profile_show_apps?: boolean | null;
+  profile_show_domains?: boolean | null;
+  profile_show_members?: boolean | null;
 }
 
 // ── Team Invites ──
@@ -455,48 +540,90 @@ export interface TeamOwnedApp {
 
 // ── Domains ──
 
+/**
+ * Shape returned by `GET /api/oauth/me/domains` — only the four fields below
+ * are exposed under the OAuth resource API. The full row (with id,
+ * verification_token, ownership) is only available via the session API.
+ */
+export interface OAuthDomain {
+  domain: string;
+  /** Unix seconds, or `null` for unverified domains. */
+  verified_at: number | null;
+  /** Unix seconds at which the next periodic re-verification is scheduled. */
+  next_reverify_at: number | null;
+  /** Unix seconds. */
+  created_at: number;
+}
+
+/**
+ * Shape returned by the session API (`/api/domains`, `/api/teams/:id/domains`)
+ * and team-domain helpers. Includes ownership and the verification token used
+ * to publish DNS/HTTP/HTML challenges.
+ */
 export interface Domain {
   id: string;
   domain: string;
-  verified: boolean;
+  /** Server stores this as 0/1; clients should compare with `=== 1` or
+   *  rely on truthiness. */
+  verified: boolean | number;
   verification_token: string;
-  owner_id: string;
-  team_id?: string;
-  created_at: string;
-  verified_at?: string;
+  /** Unix seconds, or `null` for unverified domains. */
+  verified_at: number | null;
+  /** Unix seconds at which the next periodic re-verification is scheduled. */
+  next_reverify_at?: number | null;
+  /** Which method ultimately satisfied verification, if any. */
+  verification_method?: "dns-txt" | "http-file" | "html-meta" | null;
+  /** Unix seconds. */
+  created_at: number;
 }
 
 // ── Webhooks ──
 
+/**
+ * A user-scoped webhook registered via the OAuth resource API
+ * (`/api/oauth/me/webhooks`) or the session API (`/api/user/webhooks`).
+ * The `is_active` flag is delivered as the raw 0/1 column on list responses;
+ * the SDK passes it through unchanged.
+ */
 export interface Webhook {
   id: string;
+  name: string;
   url: string;
   events: string[];
-  active: boolean;
+  /** Server stores this as 0/1; compare with `=== 1` or rely on truthiness. */
+  is_active: boolean | number;
+  /** Only returned on creation. */
   secret?: string;
-  created_at: string;
-  updated_at: string;
+  /** Unix seconds. */
+  created_at: number;
+  /** Unix seconds. Only returned on list/get. */
+  updated_at?: number;
 }
 
 export interface WebhookDelivery {
   id: string;
-  webhook_id: string;
-  event: string;
-  status_code?: number;
-  success: boolean;
-  created_at: string;
+  webhook_id?: string;
+  event_type: string;
+  response_status: number | null;
+  /** Server stores this as 0/1; truthiness check is fine. */
+  success: boolean | number;
+  /** Unix seconds. */
+  delivered_at: number;
 }
 
 export interface CreateWebhookParams {
+  name: string;
   url: string;
   events: string[];
+  /** Auto-generated when omitted. */
   secret?: string;
 }
 
 export interface UpdateWebhookParams {
+  name?: string;
   url?: string;
   events?: string[];
-  active?: boolean;
+  is_active?: boolean;
   secret?: string;
 }
 
@@ -642,8 +769,10 @@ export interface SocialConnection {
   id: string;
   provider: string;
   provider_user_id: string;
-  provider_username?: string;
-  created_at: string;
+  /** Decoded provider profile data — opaque per-provider JSON. */
+  profile?: unknown;
+  /** Unix seconds. */
+  connected_at: number;
 }
 
 // ── GPG Keys ──
@@ -652,8 +781,12 @@ export interface GPGKey {
   id: string;
   key_id: string;
   fingerprint: string;
-  email?: string;
-  created_at: string;
+  /** User-supplied label (defaults to the first UID on the imported key). */
+  name: string;
+  /** Unix seconds. */
+  created_at: number;
+  /** Unix seconds, or `null` if never used to sign a challenge. */
+  last_used_at?: number | null;
 }
 
 // ── Personal Access Tokens ──
@@ -662,31 +795,45 @@ export interface PersonalAccessToken {
   id: string;
   name: string;
   scopes: string[];
-  last_used_at?: string;
-  expires_at?: string;
-  created_at: string;
-  /** Only present in the creation response */
+  /** Unix seconds, or `null` if never used. */
+  last_used_at?: number | null;
+  /** Unix seconds, or `null` for non-expiring tokens. */
+  expires_at?: number | null;
+  /** Unix seconds. */
+  created_at: number;
+  /** The full token string. Only returned on creation — never re-fetched. */
   token?: string;
 }
 
 export interface CreatePATParams {
   name: string;
   scopes: string[];
-  expires_at?: string;
+  /** Days until expiry. Omit for a non-expiring token. */
+  expires_in_days?: number;
 }
 
 // ── Admin ──
 
+/**
+ * A user record returned by the admin/site listing endpoints. The
+ * `totp_enabled` / `passkey_count` fields only appear on `GET /api/user/me`
+ * (session API) — listings don't carry them.
+ */
 export interface AdminUser extends User {
-  totp_enabled?: boolean;
-  passkey_count?: number;
+  app_count?: number;
 }
 
+/**
+ * Generic paginated envelope returned by listing endpoints.
+ * The resource array is keyed by name (e.g. `users`, `apps`) rather
+ * than a generic `data` field.
+ */
 export interface PaginatedResponse<T> {
-  data: T[];
+  /** Resource items for this page. */
+  items: T[];
   total: number;
   page: number;
-  per_page: number;
+  limit: number;
 }
 
 export interface TeamScopeTeam {
@@ -715,13 +862,93 @@ export interface SiteConfig {
   [key: string]: unknown;
 }
 
+/**
+ * Subset of site config that the unauthenticated `/api/site` endpoint
+ * surfaces. Useful for branding the consent screen, deciding whether to
+ * show the "Register" affordance, choosing a captcha widget, etc.
+ */
+export interface PublicSiteInfo {
+  site_name: string;
+  site_description: string;
+  /** Reverse-proxied — safe to load directly. */
+  site_icon_url: string | null;
+  unproxied_site_icon_url: string | null;
+  allow_registration: boolean;
+  invite_only: boolean;
+  captcha_provider: string;
+  captcha_site_key: string;
+  pow_difficulty: number;
+  require_email_verification: boolean;
+  email_verify_methods: "link" | "send" | "both";
+  accent_color: string;
+  custom_css: string;
+  initialized: boolean;
+  r2_enabled: boolean;
+  tg_notify_source_slug: string;
+  enable_public_profiles: boolean;
+  default_profile_show_display_name: boolean;
+  default_profile_show_avatar: boolean;
+  default_profile_show_email: boolean;
+  default_profile_show_joined_at: boolean;
+  default_profile_show_gpg_keys: boolean;
+  default_profile_show_authorized_apps: boolean;
+  default_profile_show_owned_apps: boolean;
+  default_profile_show_domains: boolean;
+  default_profile_show_joined_teams: boolean;
+  default_profile_show_readme: boolean;
+  profile_readme_max_bytes: number;
+  github_readme_has_site_token: boolean;
+  github_readme_cache_ttl_seconds: number;
+  default_team_profile_show_description: boolean;
+  default_team_profile_show_avatar: boolean;
+  default_team_profile_show_owner: boolean;
+  default_team_profile_show_member_count: boolean;
+  default_team_profile_show_apps: boolean;
+  default_team_profile_show_domains: boolean;
+  default_team_profile_show_members: boolean;
+  enabled_providers: Array<{
+    slug: string;
+    name: string;
+    provider: string;
+    icon_url?: string | null;
+  }>;
+}
+
 // ── Consent ──
 
+/**
+ * A consent record returned by `GET /api/oauth/consents`. The list is
+ * grouped by app: each entry carries the app's metadata plus the active
+ * tokens issued under that consent. Revoking a consent (or any of its
+ * tokens individually) is done via the OAuth client methods on
+ * {@link PrismClient}.
+ */
 export interface OAuthConsent {
   client_id: string;
-  app_name: string;
   scopes: string[];
-  created_at: string;
+  /** Unix seconds when consent was first granted. */
+  granted_at: number;
+  app: {
+    name: string;
+    description: string;
+    /** Reverse-proxied — safe to load directly. */
+    icon_url: string | null;
+    unproxied_icon_url: string | null;
+    website_url: string | null;
+    is_verified: boolean;
+  };
+  tokens: Array<{
+    /** Opaque token id used by `revokeConsentToken`. */
+    id: string;
+    scopes: string[];
+    /** Unix seconds. */
+    created_at: number;
+    /** Unix seconds. */
+    expires_at: number;
+    /** True when the access token has a refresh token attached
+     *  (i.e. the user granted `offline_access`). */
+    is_persistent: boolean;
+  }>;
 }
 
 // ── Step-up 2FA ──
