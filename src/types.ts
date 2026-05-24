@@ -1021,9 +1021,11 @@ export interface DeviceCodeResponse {
   device_code: string;
   user_code: string;
   verification_uri: string;
-  verification_uri_complete: string;
+  /** Optional per RFC 8628 — not all servers include this. */
+  verification_uri_complete?: string;
   expires_in: number;
-  interval: number;
+  /** Polling interval in seconds. Defaults to 5 when omitted by the server. */
+  interval?: number;
 }
 
 /** Options for requesting a device code. */

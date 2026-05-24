@@ -419,16 +419,24 @@ export class PrismClient {
     signal?: AbortSignal,
   ): Promise<TokenResponse> {
     const deadline = Date.now() + expiresIn * 1000;
-    let currentInterval = interval;
+    let currentInterval = Math.max(interval, 1);
 
     while (Date.now() < deadline) {
       if (signal?.aborted) {
         throw new PrismError("Device authorization cancelled", 0, "cancelled");
       }
 
-      await new Promise((resolve) =>
-        setTimeout(resolve, currentInterval * 1000),
-      );
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, currentInterval * 1000);
+        signal?.addEventListener(
+          "abort",
+          () => {
+            clearTimeout(timer);
+            resolve();
+          },
+          { once: true },
+        );
+      });
 
       if (signal?.aborted) {
         throw new PrismError("Device authorization cancelled", 0, "cancelled");
@@ -438,17 +446,14 @@ export class PrismClient {
         return await this.pollDeviceToken(deviceCode, codeVerifier);
       } catch (err) {
         if (err instanceof PrismError) {
-          if (
-            err.code === "authorization_pending" ||
-            err.message === "authorization_pending"
-          ) {
+          const errorCode = err.code;
+          if (errorCode === "authorization_pending") {
             continue;
           }
-          if (err.code === "slow_down" || err.message === "slow_down") {
+          if (errorCode === "slow_down") {
             currentInterval += 5;
             continue;
           }
-          // access_denied, expired_token — rethrow
         }
         throw err;
       }
@@ -585,7 +590,7 @@ export class PrismClient {
           errorBody?.error ??
           response.statusText,
         response.status,
-        errorBody?.code,
+        errorBody?.code ?? errorBody?.error,
         errorBody,
       );
     }
@@ -636,7 +641,7 @@ export class PrismClient {
           errorBody?.error ??
           response.statusText,
         response.status,
-        errorBody?.code,
+        errorBody?.code ?? errorBody?.error,
         errorBody,
       );
     }
