@@ -75,6 +75,8 @@ export type {
   PublicTeamOwner,
   PublicTeamApp,
   PublicTeamMember,
+  DeviceCodeResponse,
+  DeviceCodeOptions,
 } from "./types.js";
 
 export type { AddDomainResponse, VerifyDomainResponse } from "./api/domains.js";

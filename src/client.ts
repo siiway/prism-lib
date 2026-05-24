@@ -29,6 +29,8 @@ import type {
   PublicTeamProfile,
   PublicSiteInfo,
   OAuthConsent,
+  DeviceCodeResponse,
+  DeviceCodeOptions,
 } from "./types.js";
 
 export class PrismClient {
@@ -348,6 +350,111 @@ export class PrismClient {
       `/api/oauth/me/tokens/${encodeURIComponent(tokenId)}`,
       { token: accessToken },
     );
+  }
+
+  // ── Device Code Flow (RFC 8628) ──
+
+  /**
+   * Request a device code for the device authorization flow.
+   * Used by CLI / IoT / limited-input clients that can't open a browser redirect.
+   */
+  async requestDeviceCode(
+    options?: DeviceCodeOptions,
+  ): Promise<DeviceCodeResponse> {
+    const scopes = options?.scopes ?? this.scopes;
+    const body = new URLSearchParams({
+      client_id: this.clientId,
+      scope: scopes.join(" "),
+    });
+    if (this.clientSecret) {
+      body.set("client_secret", this.clientSecret);
+    }
+    if (options?.codeChallenge) {
+      body.set("code_challenge", options.codeChallenge);
+      if (options.codeChallengeMethod) {
+        body.set("code_challenge_method", options.codeChallengeMethod);
+      }
+    }
+    return this.requestForm<DeviceCodeResponse>("/api/oauth/device/code", body);
+  }
+
+  /**
+   * Poll the token endpoint for a device code grant.
+   * Throws PrismError with code "authorization_pending" while the user hasn't acted,
+   * "slow_down" if polling too fast, "access_denied" if denied, "expired_token" if expired.
+   * Returns a TokenResponse on success.
+   */
+  async pollDeviceToken(
+    deviceCode: string,
+    codeVerifier?: string,
+  ): Promise<TokenResponse> {
+    const body = new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+      device_code: deviceCode,
+      client_id: this.clientId,
+    });
+    if (this.clientSecret) {
+      body.set("client_secret", this.clientSecret);
+    }
+    if (codeVerifier) {
+      body.set("code_verifier", codeVerifier);
+    }
+    return this.requestForm<TokenResponse>("/api/oauth/token", body);
+  }
+
+  /**
+   * Wait for device authorization using polling with the correct interval.
+   * Resolves with a TokenResponse when the user authorizes, or rejects if denied/expired.
+   * @param deviceCode - The device_code from requestDeviceCode()
+   * @param interval - Polling interval in seconds (from requestDeviceCode() response)
+   * @param expiresIn - Seconds until expiry (from requestDeviceCode() response)
+   * @param codeVerifier - PKCE code verifier if code_challenge was set
+   * @param signal - Optional AbortSignal to cancel polling
+   */
+  async waitForDeviceAuthorization(
+    deviceCode: string,
+    interval: number = 5,
+    expiresIn: number = 600,
+    codeVerifier?: string,
+    signal?: AbortSignal,
+  ): Promise<TokenResponse> {
+    const deadline = Date.now() + expiresIn * 1000;
+    let currentInterval = interval;
+
+    while (Date.now() < deadline) {
+      if (signal?.aborted) {
+        throw new PrismError("Device authorization cancelled", 0, "cancelled");
+      }
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, currentInterval * 1000),
+      );
+
+      if (signal?.aborted) {
+        throw new PrismError("Device authorization cancelled", 0, "cancelled");
+      }
+
+      try {
+        return await this.pollDeviceToken(deviceCode, codeVerifier);
+      } catch (err) {
+        if (err instanceof PrismError) {
+          if (
+            err.code === "authorization_pending" ||
+            err.message === "authorization_pending"
+          ) {
+            continue;
+          }
+          if (err.code === "slow_down" || err.message === "slow_down") {
+            currentInterval += 5;
+            continue;
+          }
+          // access_denied, expired_token — rethrow
+        }
+        throw err;
+      }
+    }
+
+    throw new PrismError("Device code expired", 0, "expired_token");
   }
 
   // ── Public site info ──

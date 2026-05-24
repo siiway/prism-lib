@@ -1014,6 +1014,25 @@ export interface Verify2FACodeResult {
   method: "totp" | "passkey" | "backup" | "sudo";
 }
 
+// ── Device Code Flow (RFC 8628) ──
+
+/** Response from the device authorization endpoint (`POST /api/oauth/device/code`). */
+export interface DeviceCodeResponse {
+  device_code: string;
+  user_code: string;
+  verification_uri: string;
+  verification_uri_complete: string;
+  expires_in: number;
+  interval: number;
+}
+
+/** Options for requesting a device code. */
+export interface DeviceCodeOptions {
+  scopes?: string[];
+  codeChallenge?: string;
+  codeChallengeMethod?: string;
+}
+
 // ── Errors ──
 
 export class PrismError extends Error {
